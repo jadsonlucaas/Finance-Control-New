@@ -38,7 +38,7 @@
 
   function showOverlay(overlayId) {
     const overlay = byId(overlayId);
-    const appRoot = byId('app');
+    const appRoot = target.document.body || byId('app');
     if (!overlay) return null;
     if (appRoot && overlay.parentElement !== appRoot) appRoot.appendChild(overlay);
     overlay.classList.remove('hidden');

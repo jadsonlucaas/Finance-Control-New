@@ -210,6 +210,8 @@ export function renderMonthlyDetailTab(renderToken = ++monthlyDetailRenderToken,
 
   if (title) title.textContent = `Visao de ${formatCompetence(competence, target)}`;
   if (subtitle) subtitle.textContent = 'Resumo tatico do mes escolhido no grafico mensal, com foco em receita, despesa, sobra e pendencias.';
+  const monthDetailView = doc.getElementById('view-mes-detalhe');
+  if (monthDetailView?.scrollIntoView) monthDetailView.scrollIntoView({ block: 'start', behavior: 'auto' });
   if (statusBadge) {
     statusBadge.className = `px-3 py-1 rounded-full text-xs font-semibold border ${statusTone.badgeClass}`;
     statusBadge.textContent = statusTone.text;

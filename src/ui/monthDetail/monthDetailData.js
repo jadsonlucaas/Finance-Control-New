@@ -21,6 +21,42 @@ function setMonthlyDetailCache(bucket, key, factory) {
   return value;
 }
 
+function getMonthlyDetailRecordKey(record = {}) {
+  if (record?.id) return `id:${record.id}`;
+  return [
+    record?.type || '',
+    record?.person || '',
+    record?.competence || '',
+    record?.description || '',
+    record?.subcategory || '',
+    record?.amount || 0,
+    record?.status || '',
+    record?.cycle || ''
+  ].join('|');
+}
+
+function mergeMonthlyDetailRecords(baseRecords = [], extraRecords = []) {
+  const merged = new Map();
+  [...baseRecords, ...extraRecords].forEach((record) => {
+    if (!record) return;
+    merged.set(getMonthlyDetailRecordKey(record), record);
+  });
+  return [...merged.values()];
+}
+
+function getMonthlyDetailOfficialSaidas(competence, target = window) {
+  const normalizedCompetence = normalizeCompetenceKey(competence);
+  if (!normalizedCompetence || typeof target.getDashboardBaseSaidas !== 'function') return [];
+
+  try {
+    return target.getDashboardBaseSaidas()
+      .filter((record) => normalizeCompetenceKey(record?.competence || '') === normalizedCompetence);
+  } catch (error) {
+    console.warn('Falha ao reutilizar saidas oficiais do dashboard no detalhe mensal', error);
+    return [];
+  }
+}
+
 export function getMonthlyDetailFilteredRecords(competence, target = window) {
   const normalizedCompetence = normalizeCompetenceKey(competence);
   if (!normalizedCompetence || typeof target.getTransactionRecords !== 'function') return [];
@@ -36,16 +72,19 @@ export function getMonthlyDetailFilteredRecords(competence, target = window) {
     cycle
   });
 
-  return setMonthlyDetailCache('filteredRecords', cacheKey, () =>
-    target.getTransactionRecords({
+  return setMonthlyDetailCache('filteredRecords', cacheKey, () => {
+    const transactionRecords = target.getTransactionRecords({
       archiveMode: 'active',
       competenceStart: normalizedCompetence,
       competenceEnd: normalizedCompetence,
       person,
       macro,
       cycle
-    }).filter((record) => record.competence === normalizedCompetence)
-  );
+    }).filter((record) => record.competence === normalizedCompetence);
+
+    const officialSaidas = getMonthlyDetailOfficialSaidas(normalizedCompetence, target);
+    return mergeMonthlyDetailRecords(transactionRecords, officialSaidas);
+  });
 }
 
 function fallbackFinancialEntradaRecords(competence, target = window) {
