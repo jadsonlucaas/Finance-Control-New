@@ -1,0 +1,193 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userProfileRef(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function userProfile(uid) {
+      return get(userProfileRef(uid));
+    }
+
+    function userProfileExists(uid) {
+      return exists(userProfileRef(uid));
+    }
+
+    function isAdminByClaim() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isAdminByProfile() {
+      return isSignedIn()
+        && userProfileExists(request.auth.uid)
+        && userProfile(request.auth.uid).data.status == 'active'
+        && userProfile(request.auth.uid).data.role in ['admin', 'owner'];
+    }
+
+    function isActiveUser() {
+      return isSignedIn()
+        && userProfileExists(request.auth.uid)
+        && userProfile(request.auth.uid).data.status == 'active';
+    }
+
+    function isAdmin() {
+      return isAdminByClaim() || isAdminByProfile();
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function hasOnlyKeys(allowedKeys) {
+      return request.resource.data.keys().hasOnly(allowedKeys);
+    }
+
+    function hasValidFinanceType() {
+      return request.resource.data.type in [
+        'saida',
+        'entrada',
+        'pessoa',
+        'categoria',
+        'macro',
+        'controle_horas',
+        'salario_historico',
+        'percentage_rule'
+      ];
+    }
+
+    function hasValidFinanceShape() {
+      return hasValidFinanceType()
+        && request.resource.data.keys().hasAll(['type', 'owner_uid', 'owner_email'])
+        && (!('amount' in request.resource.data) || request.resource.data.amount is number)
+        && (!('archived' in request.resource.data) || request.resource.data.archived is bool)
+        && (!('status' in request.resource.data) || request.resource.data.status is string)
+        && (!('competence' in request.resource.data) || request.resource.data.competence is string)
+        && (!('person' in request.resource.data) || request.resource.data.person is string)
+        && (!('owner_uid' in request.resource.data) || request.resource.data.owner_uid is string)
+        && (!('owner_email' in request.resource.data) || request.resource.data.owner_email is string)
+        && (!('shared_scope' in request.resource.data) || request.resource.data.shared_scope is string)
+        && (!('description' in request.resource.data) || request.resource.data.description is string)
+        && (!('category_name' in request.resource.data) || request.resource.data.category_name is string)
+        && (!('macro_category' in request.resource.data) || request.resource.data.macro_category is string);
+    }
+
+    function ownerIs(uid) {
+      return request.resource.data.owner_uid == uid;
+    }
+
+    function ownerIsImmutable(uid) {
+      return resource.data.owner_uid == uid
+        && request.resource.data.owner_uid == resource.data.owner_uid
+        && request.resource.data.owner_email == resource.data.owner_email;
+    }
+
+    function isValidLocalStorageKey() {
+      return request.resource.data.key is string
+        && request.resource.data.key.matches('^finance-control-.*')
+        && request.resource.data.value is string
+        && request.resource.data.updated_at is string
+        && request.resource.data.owner_uid == request.auth.uid
+        && request.resource.data.owner_email is string;
+    }
+
+    function isValidAuditLog() {
+      return request.resource.data.action is string
+        && request.resource.data.actor_uid == request.auth.uid
+        && request.resource.data.actor_email is string
+        && request.resource.data.created_at is string
+        && request.resource.data.status in ['success', 'error']
+        && request.resource.data.source is string;
+    }
+
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isAdmin();
+
+      // Enterprise mode: admin/owner elevation must be bootstrapped manually
+      // or via trusted server tooling. Client self-creation cannot assign admin.
+      allow create: if isSelf(uid)
+        && hasOnlyKeys(['uid', 'email', 'role', 'status', 'created_at', 'updated_at', 'last_login_at'])
+        && request.resource.data.uid == uid
+        && request.resource.data.email is string
+        && request.resource.data.role == 'user'
+        && request.resource.data.status == 'active'
+        && request.resource.data.created_at is string
+        && request.resource.data.updated_at is string;
+
+      allow update: if isSelf(uid)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.updated_at is string;
+
+      allow update, delete: if isAdmin();
+
+      match /finance_records/{recordId} {
+        allow read: if isSelf(uid) || isAdmin();
+        allow create: if isSelf(uid)
+          && hasValidFinanceShape()
+          && ownerIs(uid);
+        allow update: if isSelf(uid)
+          && hasValidFinanceShape()
+          && ownerIsImmutable(uid);
+        allow delete: if isSelf(uid) && resource.data.owner_uid == uid;
+      }
+
+      match /local_storage/{key} {
+        allow read: if isSelf(uid);
+        allow create, update: if isSelf(uid) && isValidLocalStorageKey();
+        allow delete: if isSelf(uid);
+      }
+
+      match /audit_logs/{logId} {
+        allow read: if isSelf(uid) || isAdmin();
+        allow create: if isSelf(uid) && isValidAuditLog();
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /shared_macros/{docId} {
+      allow read: if isActiveUser();
+      allow create: if isAdmin()
+        && hasValidFinanceShape()
+        && request.resource.data.type == 'macro'
+        && request.resource.data.shared_scope == 'global'
+        && request.resource.data.owner_uid is string
+        && request.resource.data.owner_email is string;
+      allow update: if isAdmin()
+        && hasValidFinanceShape()
+        && request.resource.data.type == 'macro'
+        && request.resource.data.shared_scope == 'global'
+        && request.resource.data.owner_uid == resource.data.owner_uid
+        && request.resource.data.owner_email == resource.data.owner_email;
+      allow delete: if isAdmin();
+    }
+
+    match /shared_categories/{docId} {
+      allow read: if isActiveUser();
+      allow create: if isAdmin()
+        && hasValidFinanceShape()
+        && request.resource.data.type == 'categoria'
+        && request.resource.data.shared_scope == 'global'
+        && request.resource.data.owner_uid is string
+        && request.resource.data.owner_email is string;
+      allow update: if isAdmin()
+        && hasValidFinanceShape()
+        && request.resource.data.type == 'categoria'
+        && request.resource.data.shared_scope == 'global'
+        && request.resource.data.owner_uid == resource.data.owner_uid
+        && request.resource.data.owner_email == resource.data.owner_email;
+      allow delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
