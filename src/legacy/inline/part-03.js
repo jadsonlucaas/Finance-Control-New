@@ -1780,6 +1780,19 @@
 
         function calcularSaldoBanco(personName = '', competence = thisMonth) {
             const normalizedCompetence = normalizeCompetenceKey(competence) || thisMonth;
+            if (typeof buildHourPeriodSummary === 'function') {
+                const summary = buildHourPeriodSummary(allRecords, {
+                    start: normalizedCompetence,
+                    end: normalizedCompetence,
+                    person: personName
+                });
+                return {
+                    saldoAnterior: roundCurrency(summary.openingBankHours || 0),
+                    horasDebito: roundCurrency(summary.bankDebitHours || 0),
+                    horasCredito: roundCurrency(summary.bankCreditHours || 0),
+                    saldoAtual: roundCurrency(summary.bankNetHours || 0)
+                };
+            }
             const bankRecords = getHourControlRecords({ person: personName })
                 .filter((record) => String(record.hour_control_type || '') === 'Banco de Horas');
 
@@ -3220,6 +3233,39 @@
                 return normalizeImportText(`${group.person} ${group.competence} ${formatCompetence(group.competence)}`).toLowerCase().includes(search);
             });
 
+            if (competenceFilter) {
+                const existingKeys = new Set(groups.map((group) => group.key));
+                getPeopleRecords().forEach((personRecord) => {
+                    const personName = personRecord?.person || '';
+                    if (!personName) return;
+                    const key = `${personName}|${competenceFilter}`;
+                    if (existingKeys.has(key)) return;
+                    const bankSummary = calcularSaldoBanco(personName, competenceFilter);
+                    const hasCarryOver = (
+                        Number(bankSummary?.saldoAnterior || 0) !== 0 ||
+                        Number(bankSummary?.horasDebito || 0) !== 0 ||
+                        Number(bankSummary?.horasCredito || 0) !== 0 ||
+                        Number(bankSummary?.saldoAtual || 0) !== 0
+                    );
+                    if (!hasCarryOver) return;
+                    groups.push({
+                        key,
+                        person: personName,
+                        competence: competenceFilter,
+                        records: [],
+                        totalHoraExtra: 0,
+                        bankSummary
+                    });
+                    existingKeys.add(key);
+                });
+
+                groups.sort((a, b) => {
+                    const competenceCompare = (b.competence || '').localeCompare(a.competence || '');
+                    if (competenceCompare !== 0) return competenceCompare;
+                    return String(a.person || '').localeCompare(String(b.person || ''), 'pt-BR');
+                });
+            }
+
             list.innerHTML = groups.map((group) => `
                 <div class="glass rounded-2xl p-4">
                     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
@@ -3502,16 +3548,8 @@
             const [person, competence] = groupKey.split('|');
             const records = getHourControlRecords({ person, competence }).sort((a, b) => (b.occurred_date || '').localeCompare(a.occurred_date || ''));
             const summary = calcularSaldoBanco(person, competence);
-            document.getElementById('hour-detail-title').textContent = `Controle de Horas • ${person}`;
-            document.getElementById('hour-detail-subtitle').textContent = formatCompetence(competence);
-            document.getElementById('hour-detail-content').innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div class="rounded-xl border border-surfaceLight bg-surfaceLight/30 p-3"><p class="text-xs text-textSecondary">Saldo anterior</p><p class="text-lg font-bold text-textPrimary mt-2">${formatHoursDecimal(Math.abs(summary.saldoAnterior))}</p></div>
-                    <div class="rounded-xl border border-surfaceLight bg-surfaceLight/30 p-3"><p class="text-xs text-textSecondary">Horas débito</p><p class="text-lg font-bold text-accent mt-2">${formatHoursDecimal(summary.horasDebito)}</p></div>
-                    <div class="rounded-xl border border-surfaceLight bg-surfaceLight/30 p-3"><p class="text-xs text-textSecondary">Horas crédito</p><p class="text-lg font-bold text-warn mt-2">${formatHoursDecimal(summary.horasCredito)}</p></div>
-                    <div class="rounded-xl border border-surfaceLight bg-surfaceLight/30 p-3"><p class="text-xs text-textSecondary">Saldo atual</p><p class="text-lg font-bold text-textPrimary mt-2">${summary.saldoAtual >= 0 ? '+' : '-'}${formatHoursDecimal(Math.abs(summary.saldoAtual))}</p></div>
-                </div>
-                ${records.map((record) => `
+            const recordsHtml = records.length
+                ? records.map((record) => `
                     <div class="rounded-xl border border-surfaceLight bg-surface p-3">
                         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                             <div>
@@ -3525,7 +3563,18 @@
                             </div>
                         </div>
                     </div>
-                `).join('')}
+                `).join('')
+                : '<div class="rounded-xl border border-surfaceLight bg-surface p-4 text-sm text-textSecondary">Sem lançamentos novos nesta competência. O saldo exibido acima é o acumulado trazido do histórico anterior.</div>';
+            document.getElementById('hour-detail-title').textContent = `Controle de Horas • ${person}`;
+            document.getElementById('hour-detail-subtitle').textContent = formatCompetence(competence);
+            document.getElementById('hour-detail-content').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div class="rounded-xl border border-surfaceLight bg-surfaceLight/30 p-3"><p class="text-xs text-textSecondary">Saldo anterior</p><p class="text-lg font-bold text-textPrimary mt-2">${formatHoursDecimal(Math.abs(summary.saldoAnterior))}</p></div>
+                    <div class="rounded-xl border border-surfaceLight bg-surfaceLight/30 p-3"><p class="text-xs text-textSecondary">Horas débito</p><p class="text-lg font-bold text-accent mt-2">${formatHoursDecimal(summary.horasDebito)}</p></div>
+                    <div class="rounded-xl border border-surfaceLight bg-surfaceLight/30 p-3"><p class="text-xs text-textSecondary">Horas crédito</p><p class="text-lg font-bold text-warn mt-2">${formatHoursDecimal(summary.horasCredito)}</p></div>
+                    <div class="rounded-xl border border-surfaceLight bg-surfaceLight/30 p-3"><p class="text-xs text-textSecondary">Saldo atual</p><p class="text-lg font-bold text-textPrimary mt-2">${summary.saldoAtual >= 0 ? '+' : '-'}${formatHoursDecimal(Math.abs(summary.saldoAtual))}</p></div>
+                </div>
+                ${recordsHtml}
             `;
             document.getElementById('hour-detail-modal').classList.remove('hidden');
             lucide.createIcons();
@@ -4545,7 +4594,7 @@
             pdfDrawExecutiveCard(doc, left + (hourCardW + hourCardGap), y, hourCardW, 74, 'Valor H.E.', fmt(hourSummary.overtimeAmount), 'total financeiro calculado', [16, 185, 129]);
             pdfDrawExecutiveCard(doc, left + ((hourCardW + hourCardGap) * 2), y, hourCardW, 74, 'Banco débito', pdfFormatHours(hourSummary.bankDebitHours), 'horas que somam saldo', [245, 158, 11]);
             pdfDrawExecutiveCard(doc, left + ((hourCardW + hourCardGap) * 3), y, hourCardW, 74, 'Banco crédito', pdfFormatHours(hourSummary.bankCreditHours), 'horas que reduzem saldo', [99, 102, 241]);
-            pdfDrawExecutiveCard(doc, left + ((hourCardW + hourCardGap) * 4), y, hourCardW, 74, 'Saldo banco', pdfFormatSignedHours(hourSummary.bankNetHours), 'saldo do período filtrado', pdfStatusColor('saldo', hourSummary.bankNetHours));
+            pdfDrawExecutiveCard(doc, left + ((hourCardW + hourCardGap) * 4), y, hourCardW, 74, 'Saldo banco', pdfFormatSignedHours(hourSummary.bankNetHours), 'saldo acumulado até o fim do período', pdfStatusColor('saldo', hourSummary.bankNetHours));
             y += 92;
 
             const hourRows = hourSummary.byPerson.slice(0, 8).map((item) => [

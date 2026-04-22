@@ -70,6 +70,20 @@ let activeSalaryHistoryPersonId = '';
 
         function calcularSaldoBanco(person = '', competencia = '') {
             const normalizedCompetence = normalizeCompetenceValue(competencia || thisMonth);
+            if (typeof buildHourPeriodSummary === 'function') {
+                const summary = buildHourPeriodSummary(allRecords, {
+                    start: normalizedCompetence,
+                    end: normalizedCompetence,
+                    person
+                });
+                return {
+                    saldoAnterior: roundCurrency(summary.openingBankHours || 0),
+                    horasDebito: roundCurrency(summary.bankDebitHours || 0),
+                    horasCredito: roundCurrency(summary.bankCreditHours || 0),
+                    saldoAtual: roundCurrency(summary.bankNetHours || 0)
+                };
+            }
+
             const records = allRecords.filter((record) =>
                 record?.type === 'controle_horas' &&
                 record.person === person &&

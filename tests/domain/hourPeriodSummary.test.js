@@ -7,6 +7,14 @@ describe('hour period summary', () => {
       {
         type: 'controle_horas',
         person: 'Jadson',
+        competence: '2026-03',
+        hour_control_type: 'Banco de Horas',
+        bank_nature: 'Debito',
+        quantidadeHoras: 2
+      },
+      {
+        type: 'controle_horas',
+        person: 'Jadson',
         competence: '2026-04',
         hour_control_type: 'Hora Extra',
         quantidadeHoras: 2.5,
@@ -30,6 +38,14 @@ describe('hour period summary', () => {
       },
       {
         type: 'controle_horas',
+        person: 'Luana',
+        competence: '2026-03',
+        hour_control_type: 'Banco de Horas',
+        bank_nature: 'Credito',
+        quantidadeHoras: 0.25
+      },
+      {
+        type: 'controle_horas',
         person: 'Jadson',
         competence: '2026-05',
         hour_control_type: 'Hora Extra',
@@ -44,15 +60,33 @@ describe('hour period summary', () => {
     expect(summary).toMatchObject({
       overtimeHours: 2.5,
       overtimeAmount: 120,
-      bankDebitHours: 0.5,
-      bankCreditHours: 1.25,
-      bankNetHours: -0.75,
+      openingBankHours: 1.75,
+      bankDebitHours: 1.25,
+      bankCreditHours: 0.5,
+      bankPeriodNetHours: 0.75,
+      bankNetHours: 2.5,
       recordsCount: 3,
       peopleCount: 2
     });
     expect(summary.byPerson).toEqual([
-      expect.objectContaining({ person: 'Jadson', overtimeHours: 2.5, bankNetHours: -1.25 }),
-      expect.objectContaining({ person: 'Luana', overtimeHours: 0, bankNetHours: 0.5 })
+      expect.objectContaining({
+        person: 'Jadson',
+        overtimeHours: 2.5,
+        openingBankHours: 2,
+        bankDebitHours: 1.25,
+        bankCreditHours: 0,
+        bankPeriodNetHours: 1.25,
+        bankNetHours: 3.25
+      }),
+      expect.objectContaining({
+        person: 'Luana',
+        overtimeHours: 0,
+        openingBankHours: -0.25,
+        bankDebitHours: 0,
+        bankCreditHours: 0.5,
+        bankPeriodNetHours: -0.5,
+        bankNetHours: -0.75
+      })
     ]);
   });
 
