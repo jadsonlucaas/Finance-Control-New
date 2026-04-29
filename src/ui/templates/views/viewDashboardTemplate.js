@@ -22,18 +22,6 @@ export function viewDashboardTemplate() {
 
                     <div class="mobile-filter-bar dashboard-filter-shell flex flex-wrap gap-2 mt-4 items-center">
                         <div class="dashboard-period-shell">
-                            <div class="dashboard-period-nav">
-                                <button id="btn-dashboard-prev-month" type="button" class="dashboard-period-arrow" title="Mes anterior">
-                                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
-                                </button>
-                                <div class="dashboard-period-nav-copy">
-                                    <p class="dashboard-period-eyebrow">Periodo</p>
-                                    <p class="dashboard-period-caption">Escolha o recorte do dashboard</p>
-                                </div>
-                                <button id="btn-dashboard-next-month" type="button" class="dashboard-period-arrow" title="Proximo mes">
-                                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
-                                </button>
-                            </div>
                             <div class="dashboard-period-grid">
                                 <label class="dashboard-period-field">
                                     <span>De</span>
