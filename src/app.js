@@ -22,6 +22,7 @@ import { installCreateElementGlobals } from './ui/dom/createElement.js';
 import { installRecordFormReaderGlobals } from './ui/records/recordFormReader.js';
 import { installRecordFormValidationGlobals } from './ui/records/recordFormValidation.js';
 import { installRecordListRendererGlobals } from './ui/records/recordListRenderer.js';
+import { installImportacaoGlobals } from './ui/importacao.js';
 import { installInitialTemplates } from './ui/templates/installInitialTemplates.js';
 
 // Application composition entry point for the modular migration.
@@ -48,6 +49,7 @@ export function bootstrapApp() {
   installRecordFormReaderGlobals(globalThis);
   installRecordFormValidationGlobals(globalThis);
   installRecordListRendererGlobals(globalThis);
+  installImportacaoGlobals(globalThis);
   installFinancialSelectorGlobals(globalThis);
   installMonthlyDetailSelectorGlobals(globalThis);
   globalThis.lucide?.createIcons?.();
@@ -110,6 +112,7 @@ if (typeof window !== 'undefined') {
     installRecordFormReaderGlobals,
     installRecordFormValidationGlobals,
     installRecordListRendererGlobals,
+    installImportacaoGlobals,
     installFinancialSelectorGlobals,
     installMonthlyDetailSelectorGlobals,
     installThemeGlobals,

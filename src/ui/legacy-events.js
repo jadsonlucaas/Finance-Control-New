@@ -95,6 +95,8 @@
     bindChange('saidas-person-filter', (event) => invoke('setSaidasPersonFilter', event.target.value));
     bindChange('saidas-cycle-filter', (event) => invoke('setSaidasCycleFilter', event.target.value));
     bindChange('saidas-macro-filter', (event) => invoke('setSaidasMacroFilter', event.target.value));
+    bindChange('saidas-date-start-filter', (event) => invoke('setSaidasDateStartFilter', event.target.value));
+    bindChange('saidas-date-end-filter', (event) => invoke('setSaidasDateEndFilter', event.target.value));
     bindInput('saidas-search', (event) => invoke('setListSearchFilter', 'saidas', event.target.value));
     bindClick('btn-new-saida', () => invoke('openNewRecordFlow', 'saida'));
     bindClick('btn-load-more-saidas', () => invoke('loadMoreRecords', 'saidas'));

@@ -27,7 +27,7 @@
                 logoutButton.id = 'btn-logout';
                 logoutButton.setAttribute('onclick', 'logout()');
                 logoutButton.className = 'text-xs bg-danger/10 hover:bg-danger text-danger hover:text-white px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors';
-                logoutButton.innerHTML = '<i data-lucide="log-out" class="w-4 h-4"></i> Sair';
+                logoutButton.innerHTML = '<i data-lucide="log-out" class="w-4 h-4"></i><span class="mobile-action-label">Sair</span>';
                 actions.appendChild(logoutButton);
             }
         }

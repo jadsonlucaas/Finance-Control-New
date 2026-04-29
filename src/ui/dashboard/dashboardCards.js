@@ -14,17 +14,17 @@ import {
 
 function createDashboardSummaryCard({ key, label, value, detail, valueClassName, activeClassName }) {
   const card = createElement('div', {
-    className: `glass rounded-xl p-3 card-hover transition-colors ${appState.focusedDashboardCard === key ? activeClassName : 'border-surfaceLight'}`,
+    className: `dashboard-summary-card glass rounded-2xl p-4 card-hover transition-colors ${appState.focusedDashboardCard === key ? activeClassName : 'border-surfaceLight'}`,
     dataset: { dashboardCard: key }
   });
   if (!card) return null;
 
   card.append(
-    createElement('p', { className: 'text-xs text-textSecondary', text: label }),
-    createElement('p', { className: `text-lg font-bold ${valueClassName}`, text: value }),
+    createElement('p', { className: 'dashboard-summary-card-label text-xs text-textSecondary', text: label }),
+    createElement('p', { className: `dashboard-summary-card-value text-lg font-bold ${valueClassName}`, text: value }),
     createActionButton({
       label: detail === 'entradas' || detail === 'saidas-pagas' ? 'Abrir lista' : detail === 'saidas-abertas' ? 'Ver pendencias' : 'Ver detalhes',
-      className: `mt-3 text-xs font-semibold hover:underline ${valueClassName}`,
+      className: `dashboard-summary-card-link mt-3 text-xs font-semibold hover:underline ${valueClassName}`,
       dataset: { dashboardDetail: detail }
     })
   );
@@ -127,14 +127,22 @@ export function ensureDashboardExpenseCategoryModal() {
     id: 'dashboard-expense-category-modal',
     titleId: 'dashboard-expense-category-title',
     subtitleId: 'dashboard-expense-category-subtitle',
-    rootClassName: 'hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[300] p-4 dashboard-detail-modal',
-    panelClassName: 'dashboard-detail-modal-panel bg-surface rounded-xl p-5 border border-surfaceLight max-w-4xl mx-4 w-full max-h-[90vh] overflow-y-auto',
+    rootClassName: 'hidden fixed inset-0 bg-black/60 z-[300] p-3 sm:p-4 overflow-y-auto flex items-start sm:items-center justify-center dashboard-detail-modal',
+    panelClassName: 'dashboard-detail-modal-panel bg-surface rounded-xl p-5 border border-surfaceLight max-w-4xl mx-auto w-full my-auto max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain',
     title: 'Despesas',
     closeButtonId: 'btn-close-expense-modal',
     summaryId: 'dashboard-expense-category-summary',
     listId: 'dashboard-expense-category-list'
   });
   if (!modal) return;
+
+  document.getElementById('dashboard-expense-category-list')?.classList.add(
+    'max-h-[56dvh]',
+    'sm:max-h-[60vh]',
+    'overflow-y-auto',
+    'overscroll-contain',
+    'pr-1'
+  );
 
   document.getElementById('btn-close-expense-modal')?.addEventListener('click', () => {
     window.closeDashboardExpenseCategoryModal?.();
@@ -181,6 +189,8 @@ export function openDashboardSaidasDetail(title, records = []) {
   } else {
     renderEmptyMessage(listEl, 'Nenhuma saida encontrada para esse filtro.', 'text-sm text-textSecondary text-center py-6');
   }
+  modal.querySelector('.dashboard-detail-modal-panel')?.scrollTo({ top: 0, behavior: 'auto' });
+  listEl.scrollTo({ top: 0, behavior: 'auto' });
   modal.classList.remove('hidden');
   scheduleIconRender(modal, window.lucide);
 }

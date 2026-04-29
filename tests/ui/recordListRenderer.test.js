@@ -20,8 +20,10 @@ describe('record list renderer', () => {
 
     expect(model.id).toBe('r1" onclick="bad');
     expect(model.title).toBe('<img src=x onerror=alert(1)>');
-    expect(model.meta).toContain('<script>alert(1)</script>');
-    expect(model.meta).toContain('<b>Pix</b>');
+    expect(model.meta).toContain('competencia:2026-04');
+    expect(model.meta).toContain('FIXO');
+    expect(model.pills).toContain('<script>alert(1)</script>');
+    expect(model.pills).toContain('<b>Pix</b>');
     expect(model.value).toBe('R$ 123.45');
   });
 

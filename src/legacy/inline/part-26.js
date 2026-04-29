@@ -30,25 +30,48 @@ const PLANNER_EVENTS_STORAGE_KEY = 'finance-control-planner-events-v1';
             if (event.type === 'holiday') {
                 return {
                     chipClass: 'bg-warn/15 text-warn',
-                    titleClass: 'text-warn'
+                    titleClass: 'text-warn',
+                    shortLabel: 'F',
+                    kindLabel: 'Feriado',
+                    dotClass: 'bg-warn'
                 };
             }
             if (event.planner_kind === 'hour_extra') {
                 return {
                     chipClass: 'bg-success/15 text-success',
-                    titleClass: 'text-success'
+                    titleClass: 'text-success',
+                    shortLabel: 'HE',
+                    kindLabel: 'Hora extra',
+                    dotClass: 'bg-success'
                 };
             }
             if (event.planner_kind === 'bank_hours') {
                 return {
                     chipClass: 'bg-sky-500/15 text-sky-600',
-                    titleClass: 'text-sky-600'
+                    titleClass: 'text-sky-600',
+                    shortLabel: 'BH',
+                    kindLabel: 'Banco de horas',
+                    dotClass: 'bg-sky-500'
                 };
             }
             return {
                 chipClass: 'bg-accent/15 text-accent',
-                titleClass: 'text-accent'
+                titleClass: 'text-accent',
+                shortLabel: 'C',
+                kindLabel: 'Compromisso',
+                dotClass: 'bg-accent'
             };
+        }
+
+        function formatPlannerDateLabel(date = '') {
+            const match = String(date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!match) return date || '';
+            return `${match[3]}/${match[2]}/${match[1]}`;
+        }
+
+        function getPlannerTodayIso() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         }
 
         function getPlannerDerivedHourEvents(month = getPlannerMonth()) {
@@ -117,17 +140,17 @@ const PLANNER_EVENTS_STORAGE_KEY = 'finance-control-planner-events-v1';
 
         function renderPlannerEventDetailCard(event = {}) {
             const visual = getPlannerEventVisual(event);
-            const metric = event.planner_kind === 'hour_extra'
-                ? 'Hora extra'
-                : event.planner_kind === 'bank_hours'
-                    ? 'Banco de horas'
-                    : event.type === 'holiday'
-                        ? 'Feriado'
-                        : 'Compromisso';
+            const metric = visual.kindLabel || 'Compromisso';
             return `
-                <div class="rounded-xl border border-surfaceLight bg-surfaceLight/25 p-3">
-                    <p class="text-sm font-semibold ${visual.titleClass}">${escapeHtml(event.title || metric)}</p>
+                <div class="planner-detail-card rounded-xl border border-surfaceLight bg-surfaceLight/25 p-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold ${visual.titleClass}">${escapeHtml(event.title || metric)}</p>
                     <p class="text-xs text-textSecondary mt-1">${metric}${event.person ? ` • ${escapeHtml(event.person)}` : ''}</p>
+                            <p class="text-[11px] text-textSecondary mt-1">${escapeHtml(formatPlannerDateLabel(event.date))}</p>
+                        </div>
+                        <span class="planner-detail-badge ${visual.chipClass}">${escapeHtml(visual.shortLabel || metric)}</span>
+                    </div>
                     ${event.note ? `<p class="text-sm text-textPrimary mt-2">${escapeHtml(event.note)}</p>` : ''}
                     ${renderPlannerBreakdownLines(event)}
                     ${event.derived ? '' : `<div class="mt-3 flex justify-end"><button type="button" data-delete-planner-event="${event.id}" class="p-2 rounded-lg text-textSecondary hover:text-danger hover:bg-danger/10"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`}
@@ -144,7 +167,7 @@ const PLANNER_EVENTS_STORAGE_KEY = 'finance-control-planner-events-v1';
             if (selectedDate) {
                 const dayEvents = events.filter((event) => event.date === selectedDate);
                 if (title) title.textContent = 'Detalhes do dia';
-                if (label) label.textContent = selectedDate;
+                if (label) label.textContent = formatPlannerDateLabel(selectedDate);
                 details.innerHTML = dayEvents.length
                     ? dayEvents.map((event) => renderPlannerEventDetailCard(event)).join('')
                     : '<p class="text-sm text-textSecondary text-center py-4">Nenhum item no dia selecionado.</p>';
@@ -166,21 +189,21 @@ const PLANNER_EVENTS_STORAGE_KEY = 'finance-control-planner-events-v1';
             modal.className = 'hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[90] p-4';
             modal.innerHTML = `
                 <div class="glass-panel rounded-2xl border border-surfaceLight max-w-6xl w-full max-h-[92vh] overflow-y-auto p-5">
-                    <div class="flex items-start justify-between gap-4 mb-5">
+                    <div class="planner-modal-header flex items-start justify-between gap-4 mb-5">
                         <div>
                             <p class="text-xs uppercase tracking-[0.18em] text-accent font-semibold">Planner Mensal</p>
                             <h3 class="text-xl font-bold text-textPrimary mt-1">Feriados e compromissos</h3>
                             <p class="text-sm text-textSecondary mt-1">Organize eventos do mes e identifique feriados usados no controle de horas.</p>
                         </div>
-                        <button data-legacy-click="closePlannerModal" class="p-2 rounded-lg hover:bg-surfaceLight text-textSecondary">
+                        <button data-legacy-click="closePlannerModal" class="planner-modal-close p-2 rounded-lg hover:bg-surfaceLight text-textSecondary">
                             <i data-lucide="x" class="w-5 h-5"></i>
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-1 xl:grid-cols-[1.5fr_0.9fr] gap-4">
-                        <div class="rounded-2xl border border-surfaceLight bg-surface/80 p-4">
-                            <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
-                                <div class="flex items-center gap-2">
+                    <div class="planner-layout grid grid-cols-1 xl:grid-cols-[1.5fr_0.9fr] gap-4">
+                        <div class="planner-calendar-panel rounded-2xl border border-surfaceLight bg-surface/80 p-4">
+                            <div class="planner-toolbar flex items-center justify-between gap-3 flex-wrap mb-4">
+                                <div class="planner-month-nav flex items-center gap-2">
                                     <button type="button" data-shift-planner-month="-1" class="w-9 h-9 rounded-lg bg-surfaceLight hover:bg-surfaceLight/80 flex items-center justify-center text-textSecondary">
                                         <i data-lucide="chevron-left" class="w-4 h-4"></i>
                                     </button>
@@ -189,49 +212,50 @@ const PLANNER_EVENTS_STORAGE_KEY = 'finance-control-planner-events-v1';
                                         <i data-lucide="chevron-right" class="w-4 h-4"></i>
                                     </button>
                                 </div>
-                                <div class="flex items-center gap-2 text-xs">
-                                    <span class="inline-flex items-center gap-1 text-warn"><span class="w-2 h-2 rounded-full bg-warn"></span>Feriado</span>
-                                    <span class="inline-flex items-center gap-1 text-accent"><span class="w-2 h-2 rounded-full bg-accent"></span>Compromisso</span>
-                                    <span class="inline-flex items-center gap-1 text-success"><span class="w-2 h-2 rounded-full bg-success"></span>Hora extra</span>
-                                    <span class="inline-flex items-center gap-1 text-sky-600"><span class="w-2 h-2 rounded-full bg-sky-500"></span>Banco de horas</span>
+                                <div class="planner-legend flex items-center gap-2 text-xs">
+                                    <span class="planner-legend-item inline-flex items-center gap-1 text-warn"><span class="w-2 h-2 rounded-full bg-warn"></span>Feriado</span>
+                                    <span class="planner-legend-item inline-flex items-center gap-1 text-accent"><span class="w-2 h-2 rounded-full bg-accent"></span>Compromisso</span>
+                                    <span class="planner-legend-item inline-flex items-center gap-1 text-success"><span class="w-2 h-2 rounded-full bg-success"></span>Hora extra</span>
+                                    <span class="planner-legend-item inline-flex items-center gap-1 text-sky-600"><span class="w-2 h-2 rounded-full bg-sky-500"></span>Banco de horas</span>
                                 </div>
                             </div>
                             <div class="grid grid-cols-7 gap-2 text-center text-[11px] uppercase tracking-[0.12em] text-textSecondary mb-2">
                                 <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sab</span>
                             </div>
+                            <p class="planner-mobile-hint text-xs text-textSecondary mb-3">Toque em um dia para ver os detalhes e organizar seus eventos.</p>
                             <div id="planner-calendar-grid" class="grid grid-cols-7 gap-2"></div>
                         </div>
 
-                        <div class="space-y-4">
-                            <div class="rounded-2xl border border-surfaceLight bg-surface/80 p-4">
+                        <div class="planner-side-panel space-y-4">
+                            <div class="planner-form-panel rounded-2xl border border-surfaceLight bg-surface/80 p-4">
                                 <h4 class="text-sm font-semibold mb-3">Novo item</h4>
-                                <div class="space-y-3">
-                                    <div>
+                                <div class="planner-form-grid space-y-3">
+                                    <div class="planner-field">
                                         <label class="text-xs text-textSecondary mb-1 block">Data</label>
                                         <input id="planner-date" type="date" class="w-full text-sm">
                                     </div>
-                                    <div>
+                                    <div class="planner-field">
                                         <label class="text-xs text-textSecondary mb-1 block">Tipo</label>
                                         <select id="planner-type" class="w-full text-sm">
                                             <option value="commitment">Compromisso</option>
                                             <option value="holiday">Feriado</option>
                                         </select>
                                     </div>
-                                    <div>
+                                    <div class="planner-field planner-field-full">
                                         <label class="text-xs text-textSecondary mb-1 block">Titulo</label>
                                         <input id="planner-title" type="text" class="w-full text-sm" placeholder="Ex.: Consulta, Feriado municipal">
                                     </div>
-                                    <div>
+                                    <div class="planner-field planner-field-full">
                                         <label class="text-xs text-textSecondary mb-1 block">Observacao</label>
                                         <textarea id="planner-note" rows="3" class="w-full text-sm" placeholder="Opcional"></textarea>
                                     </div>
-                                    <button type="button" data-legacy-click="savePlannerEvent" class="w-full px-3 py-2 rounded-xl bg-accent text-bg font-semibold text-sm hover:bg-accentDark transition-colors">
+                                    <button type="button" data-legacy-click="savePlannerEvent" class="planner-save-button w-full px-3 py-2 rounded-xl bg-accent text-bg font-semibold text-sm hover:bg-accentDark transition-colors">
                                         Salvar no planner
                                     </button>
                                 </div>
                             </div>
 
-                            <div class="rounded-2xl border border-surfaceLight bg-surface/80 p-4">
+                            <div class="planner-detail-panel rounded-2xl border border-surfaceLight bg-surface/80 p-4">
                                 <div class="flex items-center justify-between gap-3 mb-3">
                                     <h4 id="planner-detail-title" class="text-sm font-semibold">Resumo do mês</h4>
                                     <span id="planner-selected-date-label" class="text-xs text-textSecondary"></span>
@@ -288,6 +312,7 @@ const PLANNER_EVENTS_STORAGE_KEY = 'finance-control-planner-events-v1';
             const daysInMonth = getDaysInCompetenceMonth(month);
             const startOffset = firstDate.getDay();
             const events = getPlannerEventsForMonth(month);
+            const todayIso = getPlannerTodayIso();
             const eventsByDate = events.reduce((acc, event) => {
                 if (!acc[event.date]) acc[event.date] = [];
                 acc[event.date].push(event);
@@ -298,34 +323,37 @@ const PLANNER_EVENTS_STORAGE_KEY = 'finance-control-planner-events-v1';
             if (grid) {
                 const cells = [];
                 for (let i = 0; i < startOffset; i++) {
-                    cells.push('<div class="min-h-[92px] rounded-xl border border-transparent"></div>');
+                    cells.push('<div class="planner-calendar-blank min-h-[92px] rounded-xl border border-transparent"></div>');
                 }
                 for (let day = 1; day <= daysInMonth; day++) {
                     const date = `${month}-${String(day).padStart(2, '0')}`;
                     const dayEvents = eventsByDate[date] || [];
-                    const holidayCount = dayEvents.filter((event) => event.type === 'holiday').length;
-                    const commitmentCount = dayEvents.filter((event) => event.type !== 'holiday' && event.planner_kind !== 'hour_extra' && event.planner_kind !== 'bank_hours').length;
-                    const overtimeCount = dayEvents.filter((event) => event.planner_kind === 'hour_extra').length;
-                    const bankCount = dayEvents.filter((event) => event.planner_kind === 'bank_hours').length;
+                    const dayVisuals = dayEvents.map((event) => getPlannerEventVisual(event));
+                    const uniqueDots = [...new Set(dayVisuals.map((visual) => visual.dotClass).filter(Boolean))];
                     const isSelected = getPlannerSelectedDate() === date;
+                    const isToday = date === todayIso;
+                    const weekday = new Date(year, monthNumber - 1, day).getDay();
+                    const isWeekend = weekday === 0 || weekday === 6;
                     cells.push(`
-                        <button type="button" data-select-planner-date="${date}" class="min-h-[92px] text-left rounded-xl border ${isSelected ? 'border-accent bg-accent/5' : 'border-surfaceLight bg-surfaceLight/25'} hover:border-accent/50 hover:bg-surfaceLight/45 transition-colors p-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm font-semibold text-textPrimary">${day}</span>
-                                ${dayEvents.length ? `<span class="text-[10px] text-textSecondary">${dayEvents.length}</span>` : ''}
+                        <button
+                            type="button"
+                            data-select-planner-date="${date}"
+                            aria-label="${escapeHtml(formatPlannerDateLabel(date))}"
+                            class="planner-day-cell ${isSelected ? 'planner-day-cell-selected border-accent bg-accent/5' : 'border-surfaceLight bg-surfaceLight/25'} ${isToday ? 'planner-day-cell-today' : ''} ${dayEvents.length ? 'planner-day-cell-has-events' : ''} ${isWeekend ? 'planner-day-cell-weekend' : ''} min-h-[92px] text-left rounded-xl border hover:border-accent/50 hover:bg-surfaceLight/45 transition-colors p-2"
+                        >
+                            <div class="planner-day-head flex items-center justify-between">
+                                <span class="planner-day-number text-sm font-semibold text-textPrimary">${day}</span>
+                                ${dayEvents.length ? `<span class="planner-day-count text-[10px] text-textSecondary">${dayEvents.length}</span>` : isToday ? '<span class="planner-day-count planner-day-today-label">Hoje</span>' : ''}
                             </div>
-                            <div class="mt-2 space-y-1">
-                                ${dayEvents.slice(0, 3).map((event) => {
+                            <div class="planner-day-badges mt-2">
+                                ${dayEvents.slice(0, 2).map((event) => {
                                     const visual = getPlannerEventVisual(event);
-                                    return `<div class="truncate rounded-md px-2 py-1 text-[11px] ${visual.chipClass}">${escapeHtml(event.title || (event.type === 'holiday' ? 'Feriado' : 'Compromisso'))}</div>`;
+                                    return `<div class="planner-day-badge ${visual.chipClass}" title="${escapeHtml(event.title || visual.kindLabel || 'Item')}">${escapeHtml(visual.shortLabel || 'Item')}</div>`;
                                 }).join('')}
-                                ${dayEvents.length > 3 ? `<div class="text-[10px] text-textSecondary">+${dayEvents.length - 3} item(ns)</div>` : ''}
+                                ${dayEvents.length > 2 ? `<div class="planner-day-more">+${dayEvents.length - 2}</div>` : ''}
                             </div>
-                            <div class="flex gap-1 mt-2">
-                                ${holidayCount ? '<span class="w-2 h-2 rounded-full bg-warn"></span>' : ''}
-                                ${commitmentCount ? '<span class="w-2 h-2 rounded-full bg-accent"></span>' : ''}
-                                ${overtimeCount ? '<span class="w-2 h-2 rounded-full bg-success"></span>' : ''}
-                                ${bankCount ? '<span class="w-2 h-2 rounded-full bg-sky-500"></span>' : ''}
+                            <div class="planner-day-dots flex gap-1 mt-2">
+                                ${uniqueDots.map((dotClass) => `<span class="w-2 h-2 rounded-full ${dotClass}"></span>`).join('')}
                             </div>
                         </button>
                     `);

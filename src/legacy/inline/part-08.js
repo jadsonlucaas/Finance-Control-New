@@ -48,6 +48,7 @@ function renderConfiguracoes() {
             if (currentTab === 'mes-detalhe') renderMonthlyDetailTab();
             if (currentTab === 'saidas') renderSaidas();
             if (currentTab === 'entradas') renderEntradas();
+            if (currentTab === 'importacao' && typeof renderImportacao === 'function') renderImportacao();
             if (currentTab === 'controle-horas') renderControleHoras();
             if (currentTab === 'configuracoes') renderConfiguracoes();
         }

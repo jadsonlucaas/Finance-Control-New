@@ -24,6 +24,7 @@
         const listPersonFilters = { saidas: '' };
         const listCycleFilters = { saidas: '' };
         const listMacroFilters = { saidas: '' };
+        const listDateFilters = { saidas: { start: '', end: '' } };
         const listSearchFilters = { saidas: '', entradas: '' };
         let lastImportReport = null;
         let lastEntradasImportReport = null;
@@ -1485,6 +1486,17 @@
                 .trim();
         }
 
+        function getSaidaExactDate(record) {
+            return String(record?.occurred_date || record?.due_date || '').trim();
+        }
+
+        function formatExactDateLabel(value) {
+            const text = String(value || '').trim();
+            const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!match) return '';
+            return `${match[3]}/${match[2]}/${match[1]}`;
+        }
+
         function getListSearchHaystack(record) {
             return normalizeListSearchValue([
                 record?.subcategory,
@@ -1494,6 +1506,8 @@
                 record?.payment_method,
                 record?.status,
                 record?.competence,
+                getSaidaExactDate(record),
+                formatExactDateLabel(getSaidaExactDate(record)),
                 formatCompetence(record?.competence)
             ].filter(Boolean).join(' '));
         }
@@ -1945,6 +1959,9 @@
                 if (listPersonFilters.saidas && record.person !== listPersonFilters.saidas) return false;
                 if (listCycleFilters.saidas && record.cycle !== listCycleFilters.saidas) return false;
                 if (listMacroFilters.saidas && record.macro_category !== listMacroFilters.saidas) return false;
+                const exactDate = getSaidaExactDate(record);
+                if (listDateFilters.saidas.start && (!exactDate || exactDate < listDateFilters.saidas.start)) return false;
+                if (listDateFilters.saidas.end && (!exactDate || exactDate > listDateFilters.saidas.end)) return false;
                 return true;
             });
         }
@@ -1997,6 +2014,20 @@
 
         function setSaidasMacroFilter(value) {
             listMacroFilters.saidas = value || '';
+            listPagination.saidas = LIST_PAGE_SIZE;
+            updateSaidasPaymentFilterOptions();
+            renderSaidas();
+        }
+
+        function setSaidasDateStartFilter(value) {
+            listDateFilters.saidas.start = value || '';
+            listPagination.saidas = LIST_PAGE_SIZE;
+            updateSaidasPaymentFilterOptions();
+            renderSaidas();
+        }
+
+        function setSaidasDateEndFilter(value) {
+            listDateFilters.saidas.end = value || '';
             listPagination.saidas = LIST_PAGE_SIZE;
             updateSaidasPaymentFilterOptions();
             renderSaidas();
@@ -3020,13 +3051,14 @@
             const archiveColor = isArchivedRecord(r) ? 'hover:text-accent' : 'hover:text-warn';
             const isReference = isReferenceSalaryRecord(r);
             const paymentLabel = r.payment_method ? ` • ${r.payment_method}` : '';
+            const exactDateLabel = formatExactDateLabel(getSaidaExactDate(r));
             const recordId = escapeHtml(r.id || '');
 
             return `<div class="mobile-list-row finance-record-row flex items-center gap-3 bg-surfaceLight/50 rounded-lg p-2.5 text-sm">
     <i data-lucide="${icon}" class="mobile-list-icon w-4 h-4 ${color} flex-shrink-0"></i>
     <div class="mobile-list-main flex-1 min-w-0">
       <p class="mobile-list-title font-medium">${desc}${installTxt}</p>
-      <p class="mobile-list-meta text-xs text-textSecondary">${r.person || ''} • ${formatCompetence(r.competence)} • ${r.macro_category || ''}${paymentLabel}${isReference ? ' • Referência' : ''}${isArchivedRecord(r) ? ' • Arquivado' : ''}</p>
+      <p class="mobile-list-meta text-xs text-textSecondary">${r.person || ''} • ${formatCompetence(r.competence)} • ${r.macro_category || ''}${exactDateLabel ? ` • ${exactDateLabel}` : ''}${paymentLabel}${isReference ? ' • Referência' : ''}${isArchivedRecord(r) ? ' • Arquivado' : ''}</p>
     </div>
     <span class="mobile-list-status text-xs px-2 py-0.5 rounded-full ${statusBadge}">${r.status}</span>
     <span class="mobile-list-value font-semibold ${color} whitespace-nowrap">${isEntrada && r.macro_category === 'Dedução' ? '-' : ''}${fmt(r.amount)}</span>
@@ -3053,6 +3085,10 @@
                 const button = document.getElementById(`saidas-filter-${mode}`);
                 if (button) button.className = `px-3 py-1.5 text-xs rounded-md ${listArchiveFilters.saidas === mode ? 'bg-accent text-white' : 'text-textSecondary'}`;
             });
+            const startDateInput = document.getElementById('saidas-date-start-filter');
+            const endDateInput = document.getElementById('saidas-date-end-filter');
+            if (startDateInput) startDateInput.value = listDateFilters.saidas.start || '';
+            if (endDateInput) endDateInput.value = listDateFilters.saidas.end || '';
             const saidas = getListRecords('saidas');
             const totalBox = document.getElementById('saidas-total');
             const counts = getArchiveCounts('saida');
@@ -3068,6 +3104,8 @@
             const personLabel = listPersonFilters.saidas ? ` • pessoa: ${listPersonFilters.saidas}` : '';
             const cycleLabel = listCycleFilters.saidas ? ` • ciclo: ${listCycleFilters.saidas === 'QUINZENA' ? 'Quinzena' : 'Inicio do mes'}` : '';
             const macroLabel = listMacroFilters.saidas ? ` • categoria: ${listMacroFilters.saidas}` : '';
+            const startDateLabel = listDateFilters.saidas.start ? ` • de: ${formatExactDateLabel(listDateFilters.saidas.start)}` : '';
+            const endDateLabel = listDateFilters.saidas.end ? ` • até: ${formatExactDateLabel(listDateFilters.saidas.end)}` : '';
             const paymentClearAction = listPaymentFilters.saidas
                 ? ' <button type="button" data-clear-saidas-payment-filter class="text-accent hover:underline ml-1">limpar pagamento</button>'
                 : '';
@@ -3086,7 +3124,7 @@
                     : null,
                 html: window.financeRecordListRenderer ? '' : visibleRecords.map(r => renderRow(r)).join(''),
                 hasItems: saidas.length > 0,
-                metaHtml: `${visibleRecords.length} de ${saidas.length} exibidos • ${counts.active} ativos • ${counts.archived} arquivados${personLabel}${cycleLabel}${macroLabel}${paymentLabel}${paymentClearAction}${detail}${clearAction}${searchLabel}`,
+                metaHtml: `${visibleRecords.length} de ${saidas.length} exibidos • ${counts.active} ativos • ${counts.archived} arquivados${personLabel}${cycleLabel}${macroLabel}${startDateLabel}${endDateLabel}${paymentLabel}${paymentClearAction}${detail}${clearAction}${searchLabel}`,
                 showPagination: !hasSearch && saidas.length > visibleRecords.length
             });
             if (totalBox) {

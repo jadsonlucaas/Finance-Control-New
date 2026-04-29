@@ -2,10 +2,7 @@ import { normalizeCompetenceKey } from '../../core/dates.js';
 import { roundCurrency } from '../../core/money.js';
 import { consolidateMonthlyEntry } from '../../domain/entries.js';
 import { calcularINSS, calcularIRRF, calcularLiquido } from '../../domain/taxes.js';
-import {
-  getEntryDiscountRecordTotal,
-  isEntryDiscountRecord
-} from './getEntryDiscountHistory.js';
+import { isEntryDiscountRecord } from './getEntryDiscountHistory.js';
 
 function normalizeLookupText(value = '') {
   return String(value || '')
@@ -78,12 +75,7 @@ export function buildPersonMonthlyEntryConsolidation({
     calculateIrrf
   });
 
-  const descontoRecords = (Array.isArray(records) ? records : []).filter((record) =>
-    record?.type === 'entrada' &&
-    record.person === person &&
-    record.competence === normalizedCompetence &&
-    isEntryDiscountRecord(record)
-  );
+  const descontoRecords = Array.isArray(base.descontoRecords) ? base.descontoRecords : [];
   const inssRegistrado = descontoRecords.find((record) => isInssDiscount(record));
   const irrfRegistrado = descontoRecords.find((record) => {
     const text = normalizeLookupText([record.subcategory, record.earning_type, record.description].filter(Boolean).join(' '));
@@ -91,7 +83,7 @@ export function buildPersonMonthlyEntryConsolidation({
   });
   const descontosManuais = roundCurrency(descontoRecords
     .filter((record) => !isTaxDiscount(record))
-    .reduce((sum, record) => sum + getEntryDiscountRecordTotal(record), 0));
+    .reduce((sum, record) => sum + (Number(record.amount) || 0), 0));
   const adiantamentoQuinzena = calculateSalaryAdvance(receivingType, base.salaryBase);
   const dsrHoraExtra = roundCurrency(Number(dsrInfo?.dsr || 0));
   const horaExtraComDsr = roundCurrency(Number(base.hourExtra || 0) + dsrHoraExtra);

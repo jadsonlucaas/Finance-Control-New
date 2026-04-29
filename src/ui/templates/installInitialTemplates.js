@@ -3,6 +3,7 @@ import { viewDashboardTemplate } from './views/viewDashboardTemplate.js';
 import { viewMesDetalheTemplate } from './views/viewMesDetalheTemplate.js';
 import { viewSaidasTemplate } from './views/viewSaidasTemplate.js';
 import { viewEntradasTemplate } from './views/viewEntradasTemplate.js';
+import { viewImportacaoTemplate } from './views/viewImportacaoTemplate.js';
 import { viewControleHorasTemplate } from './views/viewControleHorasTemplate.js';
 import { viewCategoriasTemplate } from './views/viewCategoriasTemplate.js';
 import { viewNovoTemplate } from './views/viewNovoTemplate.js';
@@ -21,6 +22,7 @@ export function installInitialTemplates(target = document) {
       viewMesDetalheTemplate() +
       viewSaidasTemplate() +
       viewEntradasTemplate() +
+      viewImportacaoTemplate() +
       viewControleHorasTemplate() +
       viewCategoriasTemplate() +
       viewNovoTemplate() +

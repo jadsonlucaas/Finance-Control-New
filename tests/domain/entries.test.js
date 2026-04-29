@@ -43,7 +43,7 @@ describe('monthly entry consolidation', () => {
       inss: 550,
       irrf: 120,
       outrosDescontos: 100,
-      liquido: 4780,
+      liquido: 4680,
       banco: { saldoAtual: 0 }
     });
     expect(result.hourEntries.map((item) => item.id)).toEqual(['he']);

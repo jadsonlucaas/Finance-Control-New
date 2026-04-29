@@ -36,6 +36,12 @@ function normalizeEntryDiscountCycle(value = '') {
                 : roundCurrency(Number(record.amount || 0));
         }
 
+        function getEntryDiscountDisplayItemCount(record = {}) {
+            const history = getEntryDiscountHistoryItems(record);
+            if (record.entry_discount_adjustment === true && history.length) return history.length;
+            return record && Object.keys(record).length ? 1 : 0;
+        }
+
         function buildEntryDiscountHistoryEntry({ amount = 0, observation = '', cycle = 'INICIO_MES', previous = null } = {}) {
             const addedAmount = roundCurrency(Number(amount) || 0);
             const previousAmount = previous ? getEntryDiscountRecordTotal(previous) : 0;
@@ -424,6 +430,7 @@ function normalizeEntryDiscountCycle(value = '') {
                 const isQuinzenaView = entry.cycleView === 'QUINZENA';
                 const cycleAdjustment = getEntryDiscountAdjustmentRecord(entry.person, entry.competencia, entry.cycleView);
                 const currentDiscountTotal = getEntryDiscountRecordTotal(cycleAdjustment || {});
+                const currentDiscountItems = getEntryDiscountDisplayItemCount(cycleAdjustment || {});
 
                 return `<div class="glass rounded-2xl p-4 border border-surfaceLight">
                     <div class="flex items-start justify-between gap-3 flex-wrap mb-4">
@@ -461,7 +468,7 @@ function normalizeEntryDiscountCycle(value = '') {
                     <div class="rounded-xl border border-surfaceLight bg-surfaceLight/20 p-3 mt-4">
                         <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
                             <p class="text-xs uppercase tracking-[0.16em] text-textSecondary">${isQuinzenaView ? 'Descontos da quinzena' : 'Outros descontos'}</p>
-                            <p class="text-[11px] text-textSecondary">Total manual salvo: <strong class="text-danger">-${fmt(currentDiscountTotal)}</strong></p>
+                            <p class="text-[11px] text-textSecondary">Total manual salvo: <strong class="text-danger">-${fmt(currentDiscountTotal)}</strong>${currentDiscountItems ? ` • ${currentDiscountItems} item(ns)` : ''}</p>
                         </div>
                         <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr_auto_auto] gap-2">
                             <input id="${inputId}" type="number" step="0.01" min="0" value="" placeholder="Valor a adicionar" class="flex-1 bg-surface border border-surfaceLight rounded-xl px-3 py-2 text-sm text-textPrimary">

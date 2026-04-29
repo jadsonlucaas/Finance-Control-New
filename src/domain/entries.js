@@ -1,17 +1,68 @@
 import { roundCurrency } from '../core/money.js';
 import { calcularINSS, calcularIRRF, calcularLiquido } from './taxes.js';
 
+function normalizeLookupText(value = '') {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+}
+
+function getEntryDiscountHistoryItems(record = {}) {
+  return Array.isArray(record?.entry_discount_history) ? record.entry_discount_history : [];
+}
+
+function isMonthlyDiscountRecord(record = {}) {
+  if (record?.entry_discount_adjustment === true) return true;
+
+  const macro = normalizeLookupText(record?.macro_category || '');
+  if (macro.includes('DEDU')) return true;
+
+  const text = normalizeLookupText([
+    record?.earning_type,
+    record?.subcategory,
+    record?.description
+  ].filter(Boolean).join(' '));
+
+  return text.includes('DESCONTO') || text.includes('INSS') || text.includes('IRRF') || text.includes('IRPF');
+}
+
+function expandEntryDiscountRecord(record = {}) {
+  const history = getEntryDiscountHistoryItems(record);
+  if (record?.entry_discount_adjustment !== true || !history.length) return [record];
+
+  return history.map((item, index) => ({
+    ...record,
+    id: `${record.id || 'entry_discount'}_history_${item?.id || index}`,
+    amount: roundCurrency(Number(item?.amount) || 0),
+    description: String(
+      item?.observation ||
+      record?.description ||
+      record?.subcategory ||
+      record?.earning_type ||
+      'Desconto'
+    ).trim(),
+    observation: String(item?.observation || '').trim(),
+    entry_discount_history_item_id: item?.id || '',
+    entry_discount_history_index: index,
+    updated_at: item?.saved_at || record?.updated_at || record?.created_at || '',
+    created_at: item?.saved_at || record?.created_at || record?.updated_at || ''
+  }));
+}
+
 export function getMonthlyDiscountRecords(records = [], person = '', competencia = '') {
-  return records.filter((record) =>
-    record?.type === 'entrada' &&
-    record.person === person &&
-    record.competence === competencia &&
-    String(record.macro_category || '') === 'Dedução'
-  );
+  return (Array.isArray(records) ? records : [])
+    .filter((record) =>
+      record?.type === 'entrada' &&
+      record.person === person &&
+      record.competence === competencia &&
+      isMonthlyDiscountRecord(record)
+    )
+    .flatMap((record) => expandEntryDiscountRecord(record));
 }
 
 export function getMonthlyEntryRecords(records = [], person = '', competencia = '', isReferenceSalaryRecord = () => false) {
-  return records.filter((record) =>
+  return (Array.isArray(records) ? records : []).filter((record) =>
     record?.type === 'entrada' &&
     record.person === person &&
     record.competence === competencia &&
@@ -20,7 +71,7 @@ export function getMonthlyEntryRecords(records = [], person = '', competencia = 
 }
 
 export function getMonthlyHourExtraRecords(records = [], person = '', competencia = '') {
-  return records.filter((record) =>
+  return (Array.isArray(records) ? records : []).filter((record) =>
     record?.type === 'controle_horas' &&
     record.person === person &&
     record.competence === competencia &&
@@ -72,7 +123,14 @@ export function consolidateMonthlyEntry({
   });
   const inss = roundCurrency(inssRegistrado ? Number(inssRegistrado.amount || 0) : calculateInss(baseTotal));
   const irrf = roundCurrency(irrfRegistrado ? Number(irrfRegistrado.amount || 0) : calculateIrrf(baseTotal, inss));
-  const liquido = calcularLiquido({ salarioBase: salarioBaseFinal, horaExtra, outrosProventos, inss, irrf });
+  const liquido = calcularLiquido({
+    salarioBase: salarioBaseFinal,
+    horaExtra,
+    outrosProventos,
+    inss,
+    irrf,
+    outrosDescontos
+  });
 
   return {
     person,

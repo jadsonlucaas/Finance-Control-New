@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
+    "firebase:login": "npx firebase-tools login",
+    "firestore:deploy-rules": "npx firebase-tools deploy --only firestore:rules",
     "inventory:globals": "node scripts/build-global-inventory.mjs",
     "perf:audit": "playwright test tests/performance/performance.spec.js",
     "preview": "vite preview --host 127.0.0.1",

@@ -4,8 +4,8 @@ export function ensureModalShell({
   id,
   titleId = '',
   subtitleId = '',
-  rootClassName = 'hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[300] p-4',
-  panelClassName = 'bg-surface rounded-xl border border-surfaceLight max-w-4xl w-full max-h-[90vh] overflow-y-auto p-5',
+  rootClassName = 'finance-modal-shell hidden fixed inset-0 bg-black/60 z-[300] p-3 sm:p-4 overflow-y-auto flex items-start sm:items-center justify-center',
+  panelClassName = 'finance-modal-panel bg-surface rounded-xl border border-surfaceLight max-w-4xl w-full my-auto max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain p-5',
   title = '',
   subtitle = '',
   closeAction = '',
@@ -26,7 +26,7 @@ export function ensureModalShell({
     children: [
       createElement('div', {
         document,
-        className: 'flex items-start justify-between gap-3 mb-4',
+        className: 'finance-modal-header flex items-start justify-between gap-3 mb-4',
         children: [
           createElement('div', {
             document,
@@ -37,7 +37,7 @@ export function ensureModalShell({
           }),
           createElement('button', {
             document,
-            className: 'p-2 rounded-lg hover:bg-surfaceLight text-textSecondary',
+            className: 'finance-modal-close p-2 rounded-lg hover:bg-surfaceLight text-textSecondary',
             attrs: {
               type: 'button',
               id: closeButtonId || null
@@ -59,7 +59,7 @@ export function ensureModalShell({
       listId
         ? createElement('div', {
             document,
-            className: 'space-y-2',
+            className: 'space-y-2 max-h-[56dvh] sm:max-h-[60vh] overflow-y-auto overscroll-contain pr-1',
             attrs: { id: listId }
           })
         : null

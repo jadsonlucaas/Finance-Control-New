@@ -2,6 +2,13 @@ function safeText(value) {
   return String(value ?? '');
 }
 
+function formatExactDate(value = '') {
+  const text = safeText(value).trim();
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return '';
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
 const progressiveRenderJobs = new WeakMap();
 
 function scheduleProgressiveChunk(callback, target = globalThis) {
@@ -57,6 +64,7 @@ export function buildRecordRowViewModel(record = {}, deps = {}) {
   const paymentLabel = record.payment_method ? ` - ${record.payment_method}` : '';
   const referenceLabel = isReference ? ' - Referencia' : '';
   const archivedLabel = isArchived ? ' - Arquivado' : '';
+  const exactDate = formatExactDate(record.occurred_date || record.due_date || '');
 
   return {
     id: safeText(record.id),
@@ -69,10 +77,14 @@ export function buildRecordRowViewModel(record = {}, deps = {}) {
     statusBadge,
     title: `${safeText(record.description || record.subcategory || record.earning_type)}${installmentText}`,
     meta: [
-      safeText(record.person),
       deps.formatCompetence?.(record.competence) ?? safeText(record.competence),
       safeText(record.macro_category)
-    ].join(' - ') + paymentLabel + referenceLabel + archivedLabel,
+    ].filter(Boolean).join(' - ') + referenceLabel + archivedLabel,
+    pills: [
+      exactDate ? `Data ${exactDate}` : '',
+      safeText(record.person),
+      safeText(record.payment_method)
+    ].filter(Boolean),
     status,
     value: `${isEntrada && record.macro_category === 'Dedução' ? '-' : ''}${deps.fmt?.(record.amount) ?? safeText(record.amount)}`
   };
@@ -97,6 +109,14 @@ export function createRecordRowElement(record = {}, options = {}) {
   const main = documentRef.createElement('div');
   main.className = 'mobile-list-main flex-1 min-w-0';
   appendTextElement(documentRef, main, 'p', 'mobile-list-title font-medium', model.title);
+  if (Array.isArray(model.pills) && model.pills.length) {
+    const pills = documentRef.createElement('div');
+    pills.className = 'mobile-list-pills';
+    model.pills.forEach((pillText) => {
+      appendTextElement(documentRef, pills, 'span', 'mobile-list-pill', pillText);
+    });
+    main.appendChild(pills);
+  }
   appendTextElement(documentRef, main, 'p', 'mobile-list-meta text-xs text-textSecondary', model.meta);
   row.appendChild(main);
 

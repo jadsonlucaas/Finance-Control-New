@@ -65,8 +65,17 @@ Depois disso, admins podem gerenciar usuarios pelo app.
 Instale/autentique Firebase CLI e rode:
 
 ```bash
-firebase deploy --only firestore:rules
+npm run firebase:login
+npm run firestore:deploy-rules
 ```
+
+O projeto padrao ja esta apontado em `.firebaserc` para:
+
+```text
+finance-control-cce4f
+```
+
+Isso e importante porque o alerta do console Firebase sobre expiracao do modo de teste so desaparece depois que as regras versionadas de `firestore.rules` forem efetivamente publicadas no projeto real.
 
 Antes de aplicar em producao, valide no Rules Playground:
 
