@@ -8,6 +8,7 @@ import { viewControleHorasTemplate } from './views/viewControleHorasTemplate.js'
 import { viewCategoriasTemplate } from './views/viewCategoriasTemplate.js';
 import { viewNovoTemplate } from './views/viewNovoTemplate.js';
 import { viewConfiguracoesTemplate } from './views/viewConfiguracoesTemplate.js';
+import { viewParcelamentosTemplate } from './views/viewParcelamentosTemplate.js';
 
 export function installInitialTemplates(target = document) {
   const authRoot = target.getElementById('auth-root');
@@ -17,7 +18,7 @@ export function installInitialTemplates(target = document) {
 
   const mainContent = target.getElementById('main-content');
   if (mainContent && mainContent.children.length === 0) {
-    mainContent.innerHTML = 
+    mainContent.innerHTML =
       viewDashboardTemplate() +
       viewMesDetalheTemplate() +
       viewSaidasTemplate() +
@@ -26,6 +27,7 @@ export function installInitialTemplates(target = document) {
       viewControleHorasTemplate() +
       viewCategoriasTemplate() +
       viewNovoTemplate() +
-      viewConfiguracoesTemplate();
+      viewConfiguracoesTemplate() +
+      viewParcelamentosTemplate();
   }
 }

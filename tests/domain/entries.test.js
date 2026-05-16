@@ -64,4 +64,51 @@ describe('monthly entry consolidation', () => {
     expect(result.salaryBase).toBe(5000);
     expect(result.outrosProventos).toBe(300);
   });
+
+  it('includes legacy hour control records in overtime consolidation', () => {
+    const result = consolidateMonthlyEntry({
+      records: [
+        {
+          id: 'legacy-he',
+          type: 'controle_horas',
+          person: 'Ana',
+          competence: '2026-04',
+          hour_control_type: 'Hora Extra',
+          valorTotalCalculado: 220
+        }
+      ],
+      person: 'Ana',
+      competencia: '2026-04',
+      salaryInfo: { salario: 5000 },
+      calculateInss: () => 0,
+      calculateIrrf: () => 0
+    });
+
+    expect(result.hourEntries.map((item) => item.id)).toEqual(['legacy-he']);
+    expect(result.hourExtra).toBe(220);
+  });
+
+  it('recalculates overtime value when a legacy hour record was saved with zero total', () => {
+    const result = consolidateMonthlyEntry({
+      records: [
+        {
+          id: 'zeroed-he',
+          type: 'controle_horas',
+          person: 'Ana',
+          competence: '2026-04',
+          hour_control_type: 'Hora Extra',
+          quantidadeHoras: 2,
+          percentualUsado: 110,
+          valorTotalCalculado: 0
+        }
+      ],
+      person: 'Ana',
+      competencia: '2026-04',
+      salaryInfo: { salario: 2200 },
+      calculateInss: () => 0,
+      calculateIrrf: () => 0
+    });
+
+    expect(result.hourExtra).toBe(42);
+  });
 });

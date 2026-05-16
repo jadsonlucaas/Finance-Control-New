@@ -591,10 +591,14 @@
             }
 
             function hasPersistedPercentageExitRecord(rule = {}, personName = '', competence = '') {
+                return Boolean(findPersistedPercentageExitRecord(rule, personName, competence));
+            }
+
+            function findPersistedPercentageExitRecord(rule = {}, personName = '', competence = '') {
                 const targetId = getPercentageGeneratedRecordId(rule, personName, competence);
                 const targetRuleId = String(rule.id || '').trim();
                 const targetSemanticKey = getPercentageRuleRecordKey(rule, personName, competence);
-                return (Array.isArray(allRecords) ? allRecords : []).some((record) => {
+                return (Array.isArray(allRecords) ? allRecords : []).find((record) => {
                     if (!isPersistedPercentageExitRecord(record)) return false;
                     if (record.id === targetId) return true;
                     if (targetSemanticKey && getPercentageExitRecordKey(record) === targetSemanticKey) return true;
@@ -602,7 +606,21 @@
                         String(record.percentage_rule_id || '').trim() === targetRuleId &&
                         String(record.person || '').trim() === String(personName || '').trim() &&
                         normalizeCompetenceKey(record.competence || record.due_date || '') === normalizeCompetenceKey(competence);
-                });
+                }) || null;
+            }
+
+            function preservePersistedPercentageExitState(nextRecord = {}, persistedRecord = null) {
+                if (!persistedRecord) return nextRecord;
+                return {
+                    ...nextRecord,
+                    id: persistedRecord.id || nextRecord.id,
+                    status: persistedRecord.status || nextRecord.status,
+                    paid_at: persistedRecord.paid_at || '',
+                    archived: Boolean(persistedRecord.archived),
+                    archived_at: persistedRecord.archived_at || '',
+                    created_at: persistedRecord.created_at || nextRecord.created_at,
+                    virtual_record: false
+                };
             }
 
             function isPercentageExitRecordLinkedToRule(record = {}, rule = {}) {
@@ -697,6 +715,10 @@
                 if (!id) return null;
                 return percentageExitRowActionRecords.get(id)
                     || (Array.isArray(allRecords) ? allRecords.find((record) => String(record?.id || '') === id) : null)
+                    || getPercentageRuleGeneratedRecords({
+                        start: document.getElementById('f-comp-start')?.value || thisMonth,
+                        end: document.getElementById('f-comp-end')?.value || document.getElementById('f-comp-start')?.value || thisMonth
+                    }).find((record) => String(record?.id || '') === id)
                     || null;
             }
 
@@ -780,6 +802,9 @@
                 }
             }
 
+            window.__financeGetPercentageExitRecord = getRegisteredPercentageExitRecord;
+            window.__financeHandlePercentageExitRowAction = handlePercentageExitRowAction;
+
             async function materializePercentageExitRulesForRange(start = '', end = '') {
                 if (!window.dataSdk?.upsert || !window.authSdk?.getCurrentUser?.()) return;
                 if (typeof consolidarEntradaMensal !== 'function') return;
@@ -803,7 +828,8 @@
                             months.forEach((competence) => {
                                 const record = buildPercentageExitRecord(rule, person.person, competence, { virtual: false });
                                 if (!record) return;
-                                writes.push(window.dataSdk.upsert(record));
+                                const persisted = findPersistedPercentageExitRecord(rule, person.person, competence);
+                                writes.push(window.dataSdk.upsert(preservePersistedPercentageExitState(record, persisted)));
                             });
                         });
                     });
@@ -830,6 +856,8 @@
                 getPercentageExitRecordRank,
                 isPersistedPercentageExitRecord,
                 hasPersistedPercentageExitRecord,
+                findPersistedPercentageExitRecord,
+                preservePersistedPercentageExitState,
                 isPercentageExitRecordLinkedToRule,
                 isPercentageExitRecordLinkedToActiveRule,
                 filterOrphanPercentageExitRecords,

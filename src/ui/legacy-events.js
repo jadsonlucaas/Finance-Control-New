@@ -39,8 +39,12 @@
   }
 
   function findRecordById(id) {
-    if (!id || !Array.isArray(target.allRecords)) return null;
-    return target.allRecords.find((record) => String(record.id) === String(id)) || null;
+    if (!id) return null;
+    return (Array.isArray(target.allRecords)
+      ? target.allRecords.find((record) => String(record.id) === String(id))
+      : null)
+      || target.__financeGetPercentageExitRecord?.(id)
+      || null;
   }
 
   function findRecordByTypeAndId(type, id) {
@@ -163,6 +167,9 @@
     bindClick('btn-cancel-edit', () => invoke('cancelRecordEditing'));
     bindSubmit('form-new', (event) => invoke('handleSubmit', event));
     bindChange('form-type', () => invoke('toggleFormFields'));
+    bindChange('form-expense-type', () => invoke('toggleExpenseType'));
+    bindInput('form-amount', () => invoke('calculateInstallmentValue'));
+    bindInput('form-installments', () => invoke('calculateInstallmentValue'));
     bindChange('form-person', () => invoke('syncPersonSalaryDefaults'));
     bindChange('form-macro', () => invoke('updateCategoryOptions'));
     bindChange('form-status', () => invoke('togglePaidAt'));
@@ -230,6 +237,15 @@
           event.stopPropagation();
 
           const action = recordActionButton.dataset.financeRecordAction;
+          if (record.generated_percentage_rule && typeof target.__financeHandlePercentageExitRowAction === 'function') {
+            const mappedAction = action === 'toggle-paid'
+              ? 'toggle-paid'
+              : action === 'toggle-archive'
+                ? 'toggle-archive'
+                : action;
+            target.__financeHandlePercentageExitRowAction(mappedAction, record.id);
+            return;
+          }
           if (action === 'edit') invoke('openEditRecord', record);
           if (action === 'toggle-paid') invoke('togglePago', record);
           if (action === 'toggle-archive') invoke('toggleArchiveRecord', record);

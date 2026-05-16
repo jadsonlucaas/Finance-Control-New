@@ -658,6 +658,16 @@ async function assertPercentageRuleFlow(page) {
     await window.savePercentageExitRule();
     window.switchTab('saidas');
     window.renderSaidas?.();
+    const saidasList = document.getElementById('saidas-list');
+    const toggleButton = saidasList?.querySelector('[data-percentage-exit-action="toggle-paid"], [data-finance-record-action="toggle-paid"]');
+    toggleButton?.click();
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const paidGeneratedRecord = window.__smokeRecords.find((record) =>
+      record.generated_percentage_rule === true &&
+      record.description?.includes('Reserva Smoke') &&
+      record.competence === '2026-04'
+    );
+    window.renderSaidas?.();
 
     const ruleRecord = window.__smokeRecords.find((record) =>
       (record.type === 'percentage_rule' || record.type === 'regra_percentual_saida') &&
@@ -666,12 +676,14 @@ async function assertPercentageRuleFlow(page) {
 
     return {
       ruleRecord,
+      paidGeneratedRecord,
       saidasText: document.getElementById('saidas-list')?.textContent || '',
       rulesListText: document.getElementById('percentage-exit-rules-list')?.textContent || ''
     };
   });
 
   assert(Boolean(state.ruleRecord), `Saving percentage rules should persist the rule record. State: ${JSON.stringify(state)}`);
+  assert(state.paidGeneratedRecord?.status === 'Pago', `Marking a generated percentage expense as paid should persist its status. State: ${JSON.stringify(state)}`);
   assert(state.rulesListText.includes('Reserva Smoke'), `Saved percentage rules should appear in settings. State: ${JSON.stringify(state)}`);
   assert(state.saidasText.includes('Reserva Smoke') && state.saidasText.includes('Regra percentual') && state.saidasText.includes('R$ 500,00'), `Saving a percentage rule should generate a visible fixed monthly expense in the filtered expenses list. State: ${JSON.stringify(state)}`);
 }

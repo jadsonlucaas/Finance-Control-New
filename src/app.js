@@ -1,4 +1,4 @@
-﻿import '../styles/app.css';
+import '../styles/app.css';
 import '../styles/style.css';
 import { installFinancialSelectorGlobals } from './application/selectors/financialSelectors.js';
 import { installMonthlyDetailSelectorGlobals } from './application/selectors/monthlyDetailSelectors.js';
@@ -23,6 +23,7 @@ import { installRecordFormReaderGlobals } from './ui/records/recordFormReader.js
 import { installRecordFormValidationGlobals } from './ui/records/recordFormValidation.js';
 import { installRecordListRendererGlobals } from './ui/records/recordListRenderer.js';
 import { installImportacaoGlobals } from './ui/importacao.js';
+import { installParcelamentosRenderer } from './ui/records/parcelamentosRenderer.js';
 import { installInitialTemplates } from './ui/templates/installInitialTemplates.js';
 
 // Application composition entry point for the modular migration.
@@ -52,6 +53,7 @@ export function bootstrapApp() {
   installImportacaoGlobals(globalThis);
   installFinancialSelectorGlobals(globalThis);
   installMonthlyDetailSelectorGlobals(globalThis);
+  installParcelamentosRenderer(globalThis);
   globalThis.lucide?.createIcons?.();
 
   globalThis.financeRepository = FinanceRepository;

@@ -99,22 +99,29 @@ export function viewNovoTemplate() {
                                 </button>
                             </div>
                         </div>
-                        <div class="mt-3 flex items-center gap-3">
-                            <label class="text-xs text-textSecondary flex items-center gap-2"><input type="checkbox"
-                                    id="form-installment-check" class="accent-accent">
-                                Parcelado</label>
+                        <div class="mt-3">
+                            <label class="text-xs text-textSecondary mb-1 block">Tipo da Despesa</label>
+                            <select id="form-expense-type" class="w-full text-sm">
+                                <option value="a_vista">À vista</option>
+                                <option value="parcelada">Parcelada</option>
+                            </select>
                         </div>
-                        <div id="installment-fields" class="hidden mt-2 grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="text-xs text-textSecondary mb-1 block">Nº de Parcelas</label><input
-                                    id="form-installments" type="number" min="2" max="48" value="2"
-                                    class="w-full text-sm">
+                        <div id="installment-fields" class="hidden mt-3 p-3 rounded-lg border border-surfaceLight bg-surfaceLight/20 space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-xs text-textSecondary mb-1 block">Quantidade de Parcelas</label>
+                                    <input id="form-installments" type="number" min="2" max="72" value="2" class="w-full text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-textSecondary mb-1 block">Valor da Parcela (R$)</label>
+                                    <input id="form-installment-value" type="number" step="0.01" readonly placeholder="0,00" class="w-full text-sm bg-surfaceLight/60">
+                                </div>
                             </div>
                             <div>
-                                <label class="text-xs text-textSecondary mb-1 block">Valor Total</label><input
-                                    id="form-total-amount" type="number" step="0.01" placeholder="Valor total"
-                                    class="w-full text-sm">
+                                <label class="text-xs text-textSecondary mb-1 block">Cartão Utilizado</label>
+                                <input id="form-card" type="text" placeholder="Nubank, Itaú..." class="w-full text-sm">
                             </div>
+                            <p class="text-[11px] text-textSecondary">O valor preenchido no campo "Valor" acima será considerado como Valor Total da compra. As parcelas futuras serão geradas automaticamente na mesma data de vencimento dos próximos meses.</p>
                         </div>
                         <div class="mt-3">
                             <label class="text-xs text-textSecondary mb-1 block">Recorrência</label><select

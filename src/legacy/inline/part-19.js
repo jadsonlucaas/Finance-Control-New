@@ -5,20 +5,21 @@
                 return;
             }
 
-            const result = await window.dataSdk.delete(record);
-            if (!result?.isOk) {
-                showToast(`Erro ao excluir lançamento${result?.error ? `: ${result.error}` : ''}`, true);
-                return;
-            }
-
             const generatedEntry = typeof findGeneratedHourEntry === 'function'
                 ? findGeneratedHourEntry(record)
                 : null;
             if (generatedEntry) {
                 const entryDeleteResult = await window.dataSdk.delete(generatedEntry);
                 if (!entryDeleteResult?.isOk) {
-                    showToast('Lançamento de horas excluído, mas a entrada automática vinculada não pôde ser removida', true);
+                    showToast('A entrada automática vinculada não pôde ser removida. O lançamento de horas não foi excluído.', true);
+                    return;
                 }
+            }
+
+            const result = await window.dataSdk.delete(record);
+            if (!result?.isOk) {
+                showToast(`Erro ao excluir lançamento${result?.error ? `: ${result.error}` : ''}`, true);
+                return;
             }
 
             allRecords = allRecords.filter((item) => item.id !== recordId && item.id !== generatedEntry?.id);

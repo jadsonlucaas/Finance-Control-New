@@ -1,4 +1,4 @@
-﻿// ============ STATE ============
+// ============ STATE ============
         window.financeState?.installAppStateGlobals?.(window);
         let deleteTarget = null;
         let deletePerson = null;
@@ -294,7 +294,34 @@
         }
 
         function toggleInstallments() {
-            document.getElementById('installment-fields').classList.toggle('hidden', !document.getElementById('form-installment-check').checked);
+            const check = document.getElementById('form-installment-check');
+            const expenseType = document.getElementById('form-expense-type');
+            const fields = document.getElementById('installment-fields');
+            if (fields) {
+                const isInstallment = expenseType
+                    ? expenseType.value === 'parcelada'
+                    : Boolean(check?.checked);
+                fields.classList.toggle('hidden', !isInstallment);
+            }
+            calculateInstallmentValue();
+        }
+
+        function toggleExpenseType() {
+            const expenseType = document.getElementById('form-expense-type')?.value;
+            const installmentFields = document.getElementById('installment-fields');
+            if (installmentFields) {
+                installmentFields.classList.toggle('hidden', expenseType !== 'parcelada');
+            }
+            calculateInstallmentValue();
+        }
+
+        function calculateInstallmentValue() {
+            const total = Number(document.getElementById('form-amount')?.value) || 0;
+            const count = Number(document.getElementById('form-installments')?.value) || 1;
+            const installmentValueField = document.getElementById('form-installment-value');
+            if (installmentValueField) {
+                installmentValueField.value = count > 0 ? (total / count).toFixed(2) : '0.00';
+            }
         }
 
         function getEditingRecord() {
@@ -333,11 +360,30 @@
             document.getElementById('form-macro').value = '';
             updateCategoryOptions();
             document.getElementById('form-category').value = '';
-            document.getElementById('form-installment-check').checked = false;
-            document.getElementById('form-installments').value = 2;
-            document.getElementById('form-total-amount').value = '';
-            document.getElementById('form-recurrence').value = '';
+            
+            const check = document.getElementById('form-installment-check');
+            if (check) check.checked = false;
+            
+            const expenseType = document.getElementById('form-expense-type');
+            if (expenseType) expenseType.value = 'a_vista';
+            
+            const installments = document.getElementById('form-installments');
+            if (installments) installments.value = 2;
+            
+            const totalAmount = document.getElementById('form-total-amount');
+            if (totalAmount) totalAmount.value = '';
+            
+            const installmentValue = document.getElementById('form-installment-value');
+            if (installmentValue) installmentValue.value = '';
+            
+            const card = document.getElementById('form-card');
+            if (card) card.value = '';
+            
+            const recurrence = document.getElementById('form-recurrence');
+            if (recurrence) recurrence.value = '';
+            
             toggleInstallments();
+            toggleExpenseType();
             togglePaidAt();
 
             document.getElementById('form-earning-type').value = 'Salário';
@@ -416,9 +462,13 @@
                 document.getElementById('form-due').value = record.due_date || '';
                 document.getElementById('form-paid-at').value = record.paid_at || '';
                 document.getElementById('form-competence').value = record.competence || '';
-                document.getElementById('form-installment-check').checked = false;
+                const installmentCheck = document.getElementById('form-installment-check');
+                if (installmentCheck) installmentCheck.checked = false;
+                const expenseType = document.getElementById('form-expense-type');
+                if (expenseType) expenseType.value = Number(record.total_installments || 0) > 0 ? 'parcelada' : 'a_vista';
                 document.getElementById('form-recurrence').value = record.recurrence || '';
-                document.getElementById('form-total-amount').value = '';
+                const totalAmount = document.getElementById('form-total-amount');
+                if (totalAmount) totalAmount.value = '';
                 setFormCycle(record.cycle || '');
                 toggleInstallments();
                 togglePaidAt();

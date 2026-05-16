@@ -75,7 +75,7 @@ export function buildRecordRowViewModel(record = {}, deps = {}) {
     archiveColor: isArchived ? 'hover:text-accent' : 'hover:text-warn',
     color: isEntrada ? 'text-success' : 'text-danger',
     statusBadge,
-    title: `${safeText(record.description || record.subcategory || record.earning_type)}${installmentText}`,
+    title: `${safeText(record.purchase_name || record.description || record.subcategory || record.earning_type)}`,
     meta: [
       deps.formatCompetence?.(record.competence) ?? safeText(record.competence),
       safeText(record.macro_category)
@@ -83,7 +83,8 @@ export function buildRecordRowViewModel(record = {}, deps = {}) {
     pills: [
       exactDate ? `Data ${exactDate}` : '',
       safeText(record.person),
-      safeText(record.payment_method)
+      safeText(record.payment_method) || safeText(record.card),
+      totalInstallments > 0 ? `Parcela ${installmentNo}/${totalInstallments}` : ''
     ].filter(Boolean),
     status,
     value: `${isEntrada && record.macro_category === 'Dedução' ? '-' : ''}${deps.fmt?.(record.amount) ?? safeText(record.amount)}`

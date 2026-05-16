@@ -40,6 +40,18 @@ export function bindDashboardSummaryEvents(renderScheduler) {
     appState.focusedDashboardCard = appState.focusedDashboardCard === targetCard ? null : targetCard;
     renderScheduler();
   });
+
+  const parcelamentosCards = document.getElementById('dashboard-parcelamentos-cards');
+  if (parcelamentosCards && parcelamentosCards.dataset.dashboardSummaryModuleBound !== 'true') {
+    parcelamentosCards.dataset.dashboardSummaryModuleBound = 'true';
+    parcelamentosCards.addEventListener('click', (event) => {
+      const detailButton = event.target.closest('[data-dashboard-detail]');
+      if (detailButton && parcelamentosCards.contains(detailButton)) {
+        event.stopPropagation();
+        openDashboardSummaryDetail(detailButton.dataset.dashboardDetail);
+      }
+    });
+  }
 }
 
 export function installDashboardEvents(renderScheduler) {

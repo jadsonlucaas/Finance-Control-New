@@ -96,16 +96,21 @@ export function readSaidaFormValues(doc = document, options = {}) {
   const selectedCategory = String(valueOf(doc, 'form-category') || '').trim();
   const recurrence = valueOf(doc, 'form-recurrence');
   const dueDate = valueOf(doc, 'form-due');
+  const expenseType = valueOf(doc, 'form-expense-type');
+  const isInstallment = expenseType === 'parcelada' || checkedOf(doc, 'form-installment-check');
+  const installments = Number.parseInt(valueOf(doc, 'form-installments'), 10) || 2;
+  const explicitTotalAmount = Number.parseFloat(valueOf(doc, 'form-total-amount'));
+  const totalAmount = Number.isFinite(explicitTotalAmount) ? explicitTotalAmount : amount;
 
   return {
     amount,
     status,
     selectedMacro,
     selectedCategory,
-    isInstallment: checkedOf(doc, 'form-installment-check'),
+    isInstallment,
     recurrence,
-    installments: Number.parseInt(valueOf(doc, 'form-installments'), 10) || 2,
-    totalAmount: Number.parseFloat(valueOf(doc, 'form-total-amount')) || (amount * (Number.parseInt(valueOf(doc, 'form-installments'), 10) || 2)),
+    installments,
+    totalAmount,
     baseDueDate: dueDate || today,
     payloadInput: {
       person: valueOf(doc, 'form-person'),
@@ -121,6 +126,7 @@ export function readSaidaFormValues(doc = document, options = {}) {
       paidAt: valueOf(doc, 'form-paid-at'),
       cycle: formCycle,
       recurrence,
+      card: valueOf(doc, 'form-card') || '',
       hourExtraDefaults: getHourExtraRecordDefaults()
     }
   };

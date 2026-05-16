@@ -75,8 +75,22 @@ export function getMonthlyHourExtraRecords(records = [], person = '', competenci
     record?.type === 'controle_horas' &&
     record.person === person &&
     record.competence === competencia &&
-    record.hour_entry_type === 'Hora Extra'
+    (record.hour_entry_type === 'Hora Extra' || record.hour_control_type === 'Hora Extra')
   );
+}
+
+function getHourExtraRecordFinancialValue(record = {}, salaryBase = 0) {
+  const storedValue = Number(record.financial_total ?? record.valorTotalCalculado ?? record.amount ?? 0) || 0;
+  if (storedValue > 0) return storedValue;
+
+  const hours = Number(record.hours_quantity ?? record.quantidadeHoras ?? 0) || 0;
+  const base = Number(record.salary_base_snapshot ?? record.salary_base_reference ?? salaryBase ?? 0) || 0;
+  const percentage = Number(record.overtime_percentage ?? record.percentualUsado ?? 0) || 0;
+  if (hours <= 0 || base <= 0 || percentage <= 0) return 0;
+
+  const normalHourValue = roundCurrency(base / 220);
+  const rate = percentage > 1 ? percentage / 100 : percentage;
+  return roundCurrency(hours * roundCurrency(normalHourValue + roundCurrency(normalHourValue * rate)));
 }
 
 export function consolidateMonthlyEntry({
@@ -92,7 +106,8 @@ export function consolidateMonthlyEntry({
   const salaryBase = roundCurrency(salaryInfo?.salario || salaryInfo?.salary_base || salaryInfo?.amount || 0);
   const hourEntries = getMonthlyHourExtraRecords(records, person, competencia);
   const monthlyEntries = getMonthlyEntryRecords(records, person, competencia, isReferenceSalaryRecord);
-  const horaExtra = roundCurrency(hourEntries.reduce((sum, item) => sum + (Number(item.financial_total || 0)), 0));
+  const horaExtra = roundCurrency(hourEntries.reduce((sum, item) =>
+    sum + getHourExtraRecordFinancialValue(item, salaryBase), 0));
   const descontoRecords = getMonthlyDiscountRecords(records, person, competencia);
   const proventoRecords = monthlyEntries.filter((item) => {
     const label = String(item.subcategory || item.earning_type || '').toUpperCase();

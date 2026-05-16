@@ -8,6 +8,7 @@ const MODEL_LABELS = Object.freeze({
 
 const PDFJS_LIBRARY_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
 const PDFJS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+const ALLOWED_IMPORT_LIBRARY_HOSTS = new Set(['cdnjs.cloudflare.com']);
 
 const DEFAULT_CATEGORY_RULES = Object.freeze([
   { category: 'Alimentacao', confidence: 'alta', keywords: ['mercado', 'supermercado', 'ifood', 'restaurante', 'padaria', 'lanchonete', 'cafeteria'] },
@@ -43,6 +44,18 @@ function escapeHtml(value = '') {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function isAllowedImportLibraryUrl(src = '') {
+  if (typeof globalThis.isAllowedExternalLibraryUrl === 'function') {
+    return globalThis.isAllowedExternalLibraryUrl(src);
+  }
+  try {
+    const url = new URL(src, globalThis.document?.baseURI || 'https://finance-control.local/');
+    return url.protocol === 'https:' && ALLOWED_IMPORT_LIBRARY_HOSTS.has(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function normalizeText(value = '') {
@@ -214,6 +227,10 @@ async function ensurePdfJs() {
         await globalThis.loadExternalLibrary(PDFJS_LIBRARY_URL, () => Boolean(globalThis.pdfjsLib?.getDocument));
       } else {
         await new Promise((resolve, reject) => {
+          if (!isAllowedImportLibraryUrl(PDFJS_LIBRARY_URL)) {
+            reject(new Error('LIBRARY_NOT_ALLOWED:PDFJS'));
+            return;
+          }
           const existing = document.querySelector(`script[data-finance-src="${PDFJS_LIBRARY_URL}"]`);
           if (existing) {
             existing.addEventListener('load', () => resolve(), { once: true });
@@ -224,6 +241,8 @@ async function ensurePdfJs() {
           const script = document.createElement('script');
           script.src = PDFJS_LIBRARY_URL;
           script.async = true;
+          script.crossOrigin = 'anonymous';
+          script.referrerPolicy = 'no-referrer';
           script.dataset.financeSrc = PDFJS_LIBRARY_URL;
           script.onload = () => resolve();
           script.onerror = () => reject(new Error('LOAD_FAILED:PDFJS'));
@@ -237,6 +256,9 @@ async function ensurePdfJs() {
       }
 
       if (pdfjsLib.GlobalWorkerOptions) {
+        if (!isAllowedImportLibraryUrl(PDFJS_WORKER_URL)) {
+          throw new Error('LIBRARY_NOT_ALLOWED:PDFJS_WORKER');
+        }
         pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
       }
 

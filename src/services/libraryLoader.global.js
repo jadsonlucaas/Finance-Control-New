@@ -3,8 +3,21 @@
   const PDF_AUTOTABLE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
   const XLSX_LIBRARY_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
   const externalLibraryPromises = new Map();
+  const ALLOWED_EXTERNAL_LIBRARY_HOSTS = new Set([
+    'cdnjs.cloudflare.com'
+  ]);
+
+  function isAllowedExternalLibraryUrl(src) {
+    try {
+      const url = new URL(src, window.document?.baseURI || 'https://finance-control.local/');
+      return url.protocol === 'https:' && ALLOWED_EXTERNAL_LIBRARY_HOSTS.has(url.hostname);
+    } catch {
+      return false;
+    }
+  }
 
   function loadExternalLibrary(src, isReady) {
+    if (!isAllowedExternalLibraryUrl(src)) return Promise.reject(new Error(`LIBRARY_NOT_ALLOWED:${src}`));
     if (typeof isReady === 'function' && isReady()) return Promise.resolve();
     if (externalLibraryPromises.has(src)) return externalLibraryPromises.get(src);
 
@@ -19,6 +32,8 @@
       const script = document.createElement('script');
       script.src = src;
       script.async = true;
+      script.crossOrigin = 'anonymous';
+      script.referrerPolicy = 'no-referrer';
       script.dataset.financeSrc = src;
       script.onload = () => resolve();
       script.onerror = () => reject(new Error(`LOAD_FAILED:${src}`));
@@ -46,10 +61,12 @@
   Object.assign(window, {
     financeLibraryLoader: {
       loadExternalLibrary,
+      isAllowedExternalLibraryUrl,
       ensurePdfLibraries,
       ensureSpreadsheetLibrary
     },
     loadExternalLibrary,
+    isAllowedExternalLibraryUrl,
     ensurePdfLibraries,
     ensureSpreadsheetLibrary
   });

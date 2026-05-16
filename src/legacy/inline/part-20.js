@@ -87,9 +87,65 @@
 
         let editingHourControlRecordId = '';
         let editingHourControlDetailKey = '';
+        let isSavingHourControlRecord = false;
 
         function getHourControlRecordKind(record = {}) {
             return record.hour_entry_type || record.hour_control_type || 'Hora Extra';
+        }
+
+        function calculateHourControlOvertime({ person = '', competence = '', quantityHours = 0, percentage = 0, salaryBase = 0 } = {}) {
+            const base = Number(salaryBase) || 0;
+            const hours = Number(quantityHours) || 0;
+            const percent = Number(percentage) || 0;
+            const appliedPercent = percent > 1 ? percent / 100 : percent;
+            const valorHoraNormal = base > 0 ? roundCurrency(base / 220) : 0;
+            const adicional = roundCurrency(valorHoraNormal * appliedPercent);
+            const valorHoraExtra = roundCurrency(valorHoraNormal + adicional);
+            const total = roundCurrency(hours * valorHoraExtra);
+            return {
+                person,
+                competencia: competence,
+                salarioBase: base,
+                valorHoraNormal,
+                percentualAplicado: appliedPercent,
+                adicional,
+                valorHoraExtra,
+                total,
+                totalHoraExtra: total
+            };
+        }
+
+        function getHourControlSalaryBase(person = '', competence = '', record = null) {
+            const recordBase = Number(record?.salary_base_snapshot ?? record?.salary_base_reference ?? record?.valorBaseHoraBase ?? 0) || 0;
+            if (recordBase > 0) return recordBase;
+            const salaryInfo = getSalarioVigente(person, competence) || {};
+            return Number(salaryInfo.salario ?? salaryInfo.salary_base ?? salaryInfo.amount ?? salaryInfo.salarioBase ?? 0) || 0;
+        }
+
+        function getHourControlRecordFinancialTotal(record = {}) {
+            const storedTotal = Number(record.financial_total ?? record.valorTotalCalculado ?? record.amount ?? 0) || 0;
+            if (storedTotal > 0) return roundCurrency(storedTotal);
+            if (getHourControlRecordKind(record) !== 'Hora Extra') return 0;
+
+            const quantityHours = Number(record.hours_quantity ?? record.quantidadeHoras ?? 0) || 0;
+            const salaryBase = getHourControlSalaryBase(record.person || '', record.competence || '', record);
+            const percentage = Number(record.overtime_percentage ?? record.percentualUsado ?? 0) || 0;
+            if (quantityHours <= 0 || salaryBase <= 0 || percentage <= 0) return 0;
+
+            const summary = {
+                quantity: quantityHours,
+                netMinutes: Number(record.net_minutes || Math.round(quantityHours * 60)) || 0,
+                quantityFormatted: record.hours_formatted || record.quantidadeHorasFormatada || formatHoursDecimal(quantityHours)
+            };
+            const preview = getHourControlOvertimePreview({
+                person: record.person || '',
+                competence: record.competence || '',
+                date: record.occurred_date || '',
+                summary,
+                salaryBase,
+                percentage
+            });
+            return roundCurrency(preview.total || 0);
         }
 
         function findGeneratedHourEntry(record = {}) {
@@ -122,7 +178,7 @@
                 macro_category: 'Rendimento',
                 subcategory: 'Hora Extra',
                 description: hourPayload.observation || hourPayload.description || `Hora Extra • ${hourPayload.hours_formatted || hourPayload.quantidadeHorasFormatada || ''}`,
-                amount: roundCurrency(hourPayload.financial_total || hourPayload.valorTotalCalculado || 0),
+                amount: roundCurrency(getHourControlRecordFinancialTotal(hourPayload) || hourPayload.financial_total || hourPayload.valorTotalCalculado || 0),
                 status: 'Pago',
                 payment_method: '',
                 occurred_date: hourPayload.occurred_date,
@@ -167,7 +223,9 @@
                 segmentConfigs.forEach((segment) => {
                     if (segment.minutes <= 0) return;
                     const quantity = roundCurrency(segment.minutes / 60);
-                    const calc = calcularHoraExtra({
+                    const calc = calculateHourControlOvertime({
+                        person,
+                        competence,
                         salaryBase,
                         quantityHours: quantity,
                         percentage: segment.percentage
@@ -179,11 +237,13 @@
                         quantity,
                         hoursFormatted: formatHoursDecimal(quantity),
                         hourValue: calc.valorHoraExtra,
-                        total: calc.totalHoraExtra
+                        total: calc.totalHoraExtra || calc.total || 0
                     });
                 });
             } else {
-                const calc = calcularHoraExtra({
+                const calc = calculateHourControlOvertime({
+                    person,
+                    competence,
                     salaryBase,
                     quantityHours,
                     percentage
@@ -195,7 +255,7 @@
                     quantity: quantityHours,
                     hoursFormatted: workSummary.quantityFormatted || formatHoursDecimal(quantityHours),
                     hourValue: calc.valorHoraExtra,
-                    total: calc.totalHoraExtra
+                    total: calc.totalHoraExtra || calc.total || 0
                 });
             }
 
@@ -349,7 +409,7 @@
                 breakStart: document.getElementById('hour-break-start')?.value || '',
                 breakEnd: document.getElementById('hour-break-end')?.value || ''
             });
-            const salary = getSalarioVigente(person, competence).salario;
+            const salary = getHourControlSalaryBase(person, competence);
             document.getElementById('hour-quantity').value = summary.quantity ? summary.quantity.toFixed(2) : '';
             document.getElementById('hour-salary-base').value = salary ? salary.toFixed(2) : '';
             const preview = document.getElementById('hour-calculation-preview');
@@ -367,11 +427,11 @@
                 return;
             }
 
-            const calc = calcularHoraExtra({
+            const calc = calculateHourControlOvertime({
                 person,
-                competencia: competence,
-                horas: summary.quantity,
-                percentual: Number(document.getElementById('hour-percentage')?.value || 0),
+                competence,
+                quantityHours: summary.quantity,
+                percentage: Number(document.getElementById('hour-percentage')?.value || 0),
                 salaryBase: salary
             });
             const overtimePreview = getHourControlOvertimePreview({
@@ -387,6 +447,7 @@
         };
 
         saveHourControlRecord = async function () {
+            if (isSavingHourControlRecord) return;
             const editingRecord = editingHourControlRecordId
                 ? allRecords.find((item) => item?.id === editingHourControlRecordId && item.type === 'controle_horas')
                 : null;
@@ -403,7 +464,17 @@
             if (!person || !competence || !occurredDate) { showToast('Preencha pessoa, competência e data', true); return; }
             if (!summary.quantity || summary.quantity <= 0) { showToast('Informe um intervalo de horas válido', true); return; }
 
-            const salaryInfo = getSalarioVigente(person, competence);
+            const salaryBase = getHourControlSalaryBase(person, competence, editingRecord);
+            if (type === 'Hora Extra' && salaryBase <= 0) {
+                showToast('Cadastre um salário vigente para calcular a hora extra', true);
+                return;
+            }
+
+            isSavingHourControlRecord = true;
+            const saveButton = document.getElementById('btn-save-hour-control');
+            if (saveButton) saveButton.disabled = true;
+
+            try {
             const payload = {
                 ...(editingRecord || {}),
                 type: 'controle_horas',
@@ -429,8 +500,8 @@
                 hour_control_type: type,
                 observation: note,
                 description: note,
-                salary_base_snapshot: salaryInfo.salario,
-                salary_base_reference: salaryInfo.salario,
+                salary_base_snapshot: salaryBase,
+                salary_base_reference: salaryBase,
                 created_at: editingRecord?.created_at || new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 id: editingRecord?.id
@@ -438,13 +509,13 @@
 
             if (type === 'Hora Extra') {
                 const percentual = Number(document.getElementById('hour-percentage').value || 0);
-                const calc = calcularHoraExtra({ person, competencia: competence, horas: summary.quantity, percentual, salaryBase: salaryInfo.salario });
+                const calc = calculateHourControlOvertime({ person, competence, quantityHours: summary.quantity, percentage: percentual, salaryBase });
                 const overtimePreview = getHourControlOvertimePreview({
                     person,
                     competence,
                     date: occurredDate,
                     summary,
-                    salaryBase: salaryInfo.salario,
+                    salaryBase,
                     percentage: percentual
                 });
                 Object.assign(payload, {
@@ -489,10 +560,7 @@
 
             const shouldReopenDetail = Boolean(editingRecord && editingHourControlDetailKey);
             const savedId = editingRecord?.id || result.id || '';
-            const generatedEntryId = await syncGeneratedHourEntry(editingRecord, { ...payload, id: savedId }, savedId);
-            if (generatedEntryId && !editingRecord?.generated_entry_id) {
-                await window.dataSdk.update({ ...payload, id: savedId, generated_entry_id: generatedEntryId });
-            }
+            await syncGeneratedHourEntry(editingRecord, { ...payload, id: savedId }, savedId);
 
             showToast(editingRecord ? 'Lançamento de horas atualizado!' : 'Lançamento de horas salvo!');
             const keyToRefresh = shouldReopenDetail ? editingHourControlDetailKey : '';
@@ -504,6 +572,10 @@
             renderEntradas();
             if (document.getElementById('planner-modal')) renderPlannerModal();
             if (keyToRefresh) openHourDetailModal(keyToRefresh);
+            } finally {
+                isSavingHourControlRecord = false;
+                if (saveButton) saveButton.disabled = false;
+            }
         };
 
         openHourDetailModal = function (key) {
@@ -532,7 +604,7 @@
                     ${records.map((item) => {
                         const isHoraExtra = (item.hour_entry_type === 'Hora Extra' || item.hour_control_type === 'Hora Extra');
                         const valueLabel = isHoraExtra
-                            ? fmt(item.financial_total || item.valorTotalCalculado || 0)
+                            ? fmt(getHourControlRecordFinancialTotal(item))
                             : `${String(item.bank_nature || '').toLowerCase().startsWith('d') ? '+' : '-'}${item.hours_formatted || item.quantidadeHorasFormatada || formatHoursDecimal(item.hours_quantity || item.quantidadeHoras)}`;
                         const intervalLabel = item.break_start && item.break_end ? ` • intervalo ${item.break_start} às ${item.break_end}` : '';
                         const lunchLabel = Number(item.auto_lunch_minutes || 0) > 0 ? ` • almoço auto ${formatHoursDecimal((Number(item.auto_lunch_minutes || 0) / 60))}` : '';

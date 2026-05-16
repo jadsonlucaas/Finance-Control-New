@@ -51,6 +51,7 @@ function renderConfiguracoes() {
             if (currentTab === 'importacao' && typeof renderImportacao === 'function') renderImportacao();
             if (currentTab === 'controle-horas') renderControleHoras();
             if (currentTab === 'configuracoes') renderConfiguracoes();
+            if (currentTab === 'parcelamentos' && typeof window.renderParcelamentos === 'function') window.renderParcelamentos();
         }
 
         function addPerson() {

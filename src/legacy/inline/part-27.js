@@ -3,6 +3,10 @@
             const year = Number(String(normalized).slice(0, 4)) || new Date().getFullYear();
             const holidays = new Set();
 
+            if (typeof getFixedBrazilHolidayDates === 'function') {
+                getFixedBrazilHolidayDates(year).forEach((date) => holidays.add(date));
+            }
+
             if (typeof getCustomHolidayDates === 'function') {
                 getCustomHolidayDates().forEach((date) => holidays.add(date));
             }
@@ -113,7 +117,9 @@
                 breakStart: document.getElementById('hour-break-start')?.value || '',
                 breakEnd: document.getElementById('hour-break-end')?.value || ''
             });
-            const salary = getSalarioVigente(person, competence).salario;
+            const salary = typeof getHourControlSalaryBase === 'function'
+                ? getHourControlSalaryBase(person, competence)
+                : Number((getSalarioVigente(person, competence) || {}).salario || (getSalarioVigente(person, competence) || {}).salary_base || 0);
             const currentHE = typeof getHourControlOvertimePreview === 'function'
                 ? getHourControlOvertimePreview({
                     person,
@@ -130,11 +136,17 @@
                 percentual: Number(document.getElementById('hour-percentage')?.value || 0),
                 salaryBase: salary
                 });
+            const editingHourRecord = editingHourControlRecordId
+                ? allRecords.find((record) => record?.id === editingHourControlRecordId && record.type === 'controle_horas')
+                : null;
+            const editingHourTotal = editingHourRecord && (editingHourRecord.hour_entry_type === 'Hora Extra' || editingHourRecord.hour_control_type === 'Hora Extra')
+                ? Number(editingHourRecord.financial_total || editingHourRecord.valorTotalCalculado || editingHourRecord.amount || 0)
+                : 0;
             const dsr = calcularDSRHoraExtra({
                 person,
                 competencia: competence,
-                totalHoraExtra: getHoraExtraTotalForDSR(person, competence),
-                incluirLancamentoAtual: currentHE.total || currentHE.totalHoraExtra || 0
+                totalHoraExtra: Math.max(0, getHoraExtraTotalForDSR(person, competence) - editingHourTotal),
+                incluirLancamentoAtual: currentHE.total || currentHE.totalHoraExtra || currentHE.valorTotalCalculado || 0
             });
 
             dsrInput.value = dsr.dsr ? dsr.dsr.toFixed(2) : '';

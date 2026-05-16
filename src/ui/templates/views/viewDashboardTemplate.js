@@ -55,6 +55,19 @@ export function viewDashboardTemplate() {
 
                 <div class="mobile-summary-grid grid grid-cols-2 md:grid-cols-4 gap-3 mb-4" id="summary-cards"></div>
 
+                <div class="glass rounded-xl p-4 mb-4" id="dashboard-parcelamentos-section">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h3 class="text-sm font-semibold text-textSecondary">Planejamento e Parcelamentos</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3" id="dashboard-parcelamentos-cards">
+                        <!-- Rendered via JS -->
+                    </div>
+                    <div id="dashboard-parcelamentos-alert" class="mt-3 hidden p-3 rounded-lg bg-warn/10 border border-warn/20 text-warn text-sm flex items-start gap-2">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0"></i>
+                        <span id="dashboard-parcelamentos-alert-text"></span>
+                    </div>
+                </div>
+
                 <div class="glass rounded-xl p-4 mb-4">
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>

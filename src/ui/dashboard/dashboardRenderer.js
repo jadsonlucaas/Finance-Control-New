@@ -79,7 +79,13 @@ export function renderDashboard() {
   renderDashboardSummaryFromBase(aggregations);
   renderDashboardPersonBalanceCards();
   renderDashboardRecentListFromBase(aggregations);
+  if (typeof renderDashboardParcelamentosCards === 'function') {
+      renderDashboardParcelamentosCards();
+  } else if (typeof window.renderDashboardParcelamentosCards === 'function') {
+      window.renderDashboardParcelamentosCards();
+  }
   scheduleIconRender(document.getElementById('summary-cards') || document, window.lucide);
+  scheduleIconRender(document.getElementById('dashboard-parcelamentos-section') || document, window.lucide);
   scheduleIconRender(document.getElementById('recent-list') || document, window.lucide);
 
   scheduleDashboardHeavyRender(() => {

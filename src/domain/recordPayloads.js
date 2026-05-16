@@ -108,6 +108,9 @@ export function buildSaidaPayload(input = {}) {
     installmentNo = 0,
     totalInstallments = 0,
     parentId = '',
+    isInstallment = false,
+    purchaseName = '',
+    card = '',
     now = new Date(),
     hourExtraDefaults = buildEmptyHourExtraDefaults()
   } = input;
@@ -128,6 +131,9 @@ export function buildSaidaPayload(input = {}) {
     installment_no: installmentNo,
     total_installments: totalInstallments,
     parent_id: parentId,
+    is_installment: isInstallment || installmentNo > 0,
+    purchase_name: purchaseName || description || '',
+    card: card || '',
     earning_type: '',
     cycle,
     recurrence,
@@ -198,6 +204,9 @@ export function buildInstallmentSaidaPayloads(input = {}) {
       installmentNo: index + 1,
       totalInstallments: count,
       parentId,
+      isInstallment: true,
+      purchaseName: input.description || '',
+      card: input.card || '',
       recurrence: '',
       description: `${input.description || ''} (${index + 1}/${count})`,
       now

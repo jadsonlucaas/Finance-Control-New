@@ -1,6 +1,19 @@
 const libraryPromises = new Map();
+const ALLOWED_EXTERNAL_LIBRARY_HOSTS = new Set([
+  'cdnjs.cloudflare.com'
+]);
+
+export function isAllowedExternalLibraryUrl(src) {
+  try {
+    const url = new URL(src, globalThis.document?.baseURI || 'https://finance-control.local/');
+    return url.protocol === 'https:' && ALLOWED_EXTERNAL_LIBRARY_HOSTS.has(url.hostname);
+  } catch {
+    return false;
+  }
+}
 
 export function loadExternalLibrary(src, isReady) {
+  if (!isAllowedExternalLibraryUrl(src)) return Promise.reject(new Error(`LIBRARY_NOT_ALLOWED:${src}`));
   if (typeof isReady === 'function' && isReady()) return Promise.resolve();
   if (libraryPromises.has(src)) return libraryPromises.get(src);
 
@@ -15,6 +28,8 @@ export function loadExternalLibrary(src, isReady) {
     const script = document.createElement('script');
     script.src = src;
     script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.referrerPolicy = 'no-referrer';
     script.dataset.financeSrc = src;
     script.onload = () => resolve();
     script.onerror = () => reject(new Error(`LOAD_FAILED:${src}`));
